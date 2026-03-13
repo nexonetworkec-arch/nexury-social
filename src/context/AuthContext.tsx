@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { dataService } from '../services/dataService';
@@ -24,6 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [recoveryMode, setRecoveryMode] = useState(false);
+  const refreshingRef = useRef(false);
 
   const login = async (credentials: { email: string, password: string }) => {
     try {
@@ -60,13 +61,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUser = async () => {
+    if (refreshingRef.current) {
+      console.log('Refresh user already in progress, skipping...');
+      return;
+    }
+
+    refreshingRef.current = true;
     console.log('Refreshing user data...');
     try {
-      // Timeout de 4 segundos para la llamada a Supabase
+      // Timeout de 8 segundos para la llamada a Supabase
       const { data, error: authError } = await Promise.race([
         supabase.auth.getUser(),
         new Promise<{ data: { user: null }, error: any }>((resolve) => 
-          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 15000)
+          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 8000)
         )
       ]);
       
@@ -152,8 +159,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Refresh user critical failure:', error);
     } finally {
-      console.log('Refresh user finished, setting loading to false');
-      setLoading(false);
+      console.log('Refresh user finished');
+      refreshingRef.current = false;
     }
   };
 
@@ -259,8 +266,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user && mounted) {
-          // Solo refrescar si no es la carga inicial (que ya lo hace checkSession)
-          // o si el usuario actual es diferente
+          // Solo refrescar si no es la carga inicial o si el usuario actual es diferente
+          // Esto evita el bucle infinito y llamadas redundantes
           if (isInitialCheckDone) {
             console.log('User session active, refreshing user data...');
             await refreshUser();
@@ -295,6 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await refreshUser();
         } else {
           console.log('No initial session found');
+          setUser(null);
         }
       } catch (err) {
         console.error('Error checking session:', err);

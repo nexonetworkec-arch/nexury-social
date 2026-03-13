@@ -52,9 +52,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       const msgChannel = supabase
         .channel(`messages_count:${userId}`)
         .on('postgres_changes', { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
-          table: 'messages'
+          table: 'messages',
+          filter: `receiver_id=eq.${userId}`
         }, () => {
           fetchCounts();
         })
