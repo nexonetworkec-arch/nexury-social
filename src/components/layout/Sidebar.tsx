@@ -44,14 +44,14 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
   return (
     <>
       {/* Desktop Sidebar */}
-      <nav className="hidden sm:flex flex-col h-screen sticky top-0 p-4 lg:p-6 gap-2 border-r border-slate-100 w-20 lg:w-72 bg-white">
-        <div className="p-3 mb-8">
-          <div className="w-12 h-12 brand-gradient rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200 rotate-3 hover:rotate-0 transition-transform duration-300 cursor-pointer" onClick={() => handleTabClick('Inicio')}>
+      <nav className="hidden sm:flex flex-col h-screen sticky top-0 p-4 lg:p-6 gap-2 border-r border-slate-100 w-20 lg:w-72 bg-white overflow-y-auto no-scrollbar">
+        <div className="p-3 mb-4 shrink-0">
+          <div className="w-12 h-12 brand-gradient rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200 rotate-3 hover:rotate-0 transition-transform duration-300 cursor-pointer mb-6" onClick={() => handleTabClick('Inicio')}>
             <span className="text-white font-bold text-2xl font-display">N</span>
           </div>
         </div>
         
-        <div className="space-y-1">
+        <div className="space-y-1 shrink-0">
           <SidebarItem icon={Home} label="Inicio" active={currentView === 'Inicio'} onClick={() => handleTabClick('Inicio')} />
           <SidebarItem icon={Users} label="Nexuarios" active={currentView === 'Nexuarios'} onClick={() => handleTabClick('Nexuarios')} />
           <SidebarItem icon={Search} label="Explorar" active={currentView === 'Explorar'} onClick={() => handleTabClick('Explorar')} />
@@ -72,25 +72,9 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
           <SidebarItem icon={Calendar} label="Citas" active={currentView === 'Citas'} onClick={() => handleTabClick('Citas')} />
           <SidebarItem icon={Bookmark} label="Guardados" active={currentView === 'Guardados'} onClick={() => handleTabClick('Guardados')} />
           <SidebarItem icon={User} label="Perfil" active={currentView === 'Perfil'} onClick={() => handleTabClick('Perfil')} />
-          
-          <SidebarItem icon={LogOut} label="Cerrar Sesión" onClick={handleLogout} />
         </div>
         
-        <Button 
-          onClick={() => window.dispatchEvent(new CustomEvent('openCreatePost'))}
-          className="mt-8 w-full hidden lg:flex"
-        >
-          Publicar
-        </Button>
-        <Button 
-          size="icon"
-          onClick={() => window.dispatchEvent(new CustomEvent('openCreatePost'))}
-          className="mt-8 lg:hidden flex"
-        >
-          <Feather size={24} />
-        </Button>
-
-        <div className="mt-auto relative group/user">
+        <div className="mt-auto pt-8 relative group/user shrink-0">
           <div 
             onClick={() => handleTabClick('Perfil')}
             className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-100"

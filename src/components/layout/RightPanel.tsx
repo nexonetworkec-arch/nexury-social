@@ -19,8 +19,8 @@ const TrendItem = ({ category, title, posts, onClick }: { category: string, titl
 
 export const RightPanel = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchChange: (query: string) => void }) => {
   return (
-    <div className="hidden xl:flex flex-col h-screen sticky top-0 p-6 gap-6 w-[380px] bg-white border-l border-slate-100">
-      <div className="relative group">
+    <div className="hidden xl:flex flex-col h-screen sticky top-0 p-6 gap-6 w-[380px] bg-white border-l border-slate-100 overflow-y-auto no-scrollbar">
+      <div className="relative group shrink-0">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
         <input 
           type="text" 

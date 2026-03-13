@@ -185,6 +185,22 @@ CREATE TABLE IF NOT EXISTS public.push_tokens (
   UNIQUE(user_id, token)
 );
 
+CREATE TABLE IF NOT EXISTS public.app_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  maintenance_mode BOOLEAN DEFAULT FALSE,
+  registrations_open BOOLEAN DEFAULT TRUE,
+  email_notifications BOOLEAN DEFAULT TRUE,
+  ai_moderation BOOLEAN DEFAULT TRUE,
+  smart_feed_enabled BOOLEAN DEFAULT TRUE,
+  verified_boost NUMERIC DEFAULT 1.5,
+  admin_boost NUMERIC DEFAULT 3.0,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  CONSTRAINT single_row CHECK (id = 1)
+);
+
+-- Insert default settings
+INSERT INTO public.app_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
 -- ===============================================================
 -- 5. VIEWS
 -- ===============================================================
@@ -353,6 +369,7 @@ ALTER TABLE public.verified_benefits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verified_benefits_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.post_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.push_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 
 -- Profiles
 CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
@@ -412,6 +429,10 @@ CREATE POLICY "Users can record views" ON public.post_views FOR INSERT WITH CHEC
 
 -- Push Tokens
 CREATE POLICY "Users can manage their push tokens" ON public.push_tokens FOR ALL USING (auth.uid() = user_id);
+
+-- App Settings
+CREATE POLICY "Public read access for app_settings" ON public.app_settings FOR SELECT USING (true);
+CREATE POLICY "Admins can update app_settings" ON public.app_settings FOR UPDATE USING (public.is_admin());
 
 -- ===============================================================
 -- 9. STORAGE BUCKETS & POLICIES

@@ -47,6 +47,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
         throw new Error('El nombre de usuario debe tener al menos 3 caracteres');
       }
 
+      if (!/^[a-z0-9._]+$/.test(username)) {
+        throw new Error('El nombre de usuario solo puede contener letras, números, puntos y guiones bajos');
+      }
+
       let finalAvatarUrl = avatarUrl;
 
       // Si hay un archivo nuevo, subirlo primero
