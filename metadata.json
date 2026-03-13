@@ -1,0 +1,8 @@
+{
+  "name": "Nexury",
+  "description": "Una plataforma de red social de alto rendimiento y modular con interacciones en tiempo real, arquitectura de grado empresarial y una interfaz moderna.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

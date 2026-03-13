@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+}
+
+@layer base {
+  body {
+    @apply bg-[#fafafa] text-slate-900 antialiased;
+  }
+}
+
+@utility glass {
+  @apply bg-white/70 backdrop-blur-xl border-b border-white/20;
+}
+
+@utility brand-gradient {
+  @apply bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600;
+}
+
+@utility brand-text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600;
+}
+
+@utility card-modern {
+  @apply bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+@utility btn-primary {
+  @apply brand-gradient text-white font-semibold rounded-full px-6 py-2.5 shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98] transition-all;
+}
+
+@utility nav-item-active {
+  @apply bg-indigo-50 text-indigo-600 font-semibold;
+}
