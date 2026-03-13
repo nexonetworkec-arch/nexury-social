@@ -73,17 +73,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let sbUser = sbUserOverride;
       
       if (!sbUser) {
-        // Timeout de 8 segundos para la llamada a Supabase
+        // Timeout de 5 segundos para la llamada a Supabase (más corto para reaccionar rápido)
         const { data, error: authError } = await Promise.race([
           supabase.auth.getUser(),
           new Promise<{ data: { user: null }, error: any }>((resolve) => 
-            setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 8000)
+            setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 5000)
           )
         ]);
         
         if (authError) {
           console.log('Auth error during refresh:', authError);
-          // Si es un timeout y ya tenemos un usuario, no lo borramos inmediatamente
           if (authError.message === 'Timeout calling getUser' && userIdRef.current) {
             console.log('Timeout but user exists, keeping current state');
             return;
@@ -105,75 +104,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth user found:', sbUser.id);
       userIdRef.current = sbUser.id;
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sbUser.id)
-        .maybeSingle();
-      
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
+      // SOLUCIÓN PROFESIONAL: Establecer estado optimista inmediato
+      // Esto permite que el usuario entre a la app sin esperar a la DB de perfiles
+      const optimisticUser = {
+        id: sbUser.id,
+        email: sbUser.email || '',
+        username: sbUser.email?.split('@')[0] || 'usuario',
+        display_name: sbUser.user_metadata?.display_name || sbUser.email?.split('@')[0] || 'Usuario',
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sbUser.id}`,
+        is_admin: false,
+        is_super_admin: false,
+        is_verified: false,
+        followers_count: 0,
+        following_count: 0,
+        total_likes_received: 0,
+        is_optimistic: true // Flag para saber que es carga parcial
+      };
+
+      // Si no tenemos usuario o el que tenemos es diferente, ponemos el optimista
+      if (!user || user.id !== sbUser.id) {
+        setUser(optimisticUser as any);
       }
 
-      if (profile) {
-        console.log('User profile loaded successfully');
-        
-        if (profile.is_blocked && !profile.is_super_admin) {
-          console.log('User is blocked, signing out...');
-          await logout();
-          throw new Error('Tu cuenta ha sido suspendida por un administrador.');
-        }
-
-        // Aseguramos que el objeto tenga las propiedades correctas
-        const counts = await dataService.getUserCounts(sbUser.id);
-        const userWithRoles = {
-          ...profile,
-          // Un super admin siempre tiene poderes de admin en el frontend
-          is_admin: profile.is_admin || profile.is_super_admin,
-          followers_count: counts.followers,
-          following_count: counts.following,
-          total_likes_received: counts.total_likes
-        };
-        setUser(userWithRoles);
-      } else {
-        console.log('Profile not found, attempting to create or using fallback...');
-        // El perfil no existe, intentamos crearlo
+      // El resto de la carga se hace en "segundo plano" respecto al estado de carga global
+      const loadFullProfile = async () => {
         try {
-          const { data: newProfile, error: insertError } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .insert([{
-              id: sbUser.id,
-              email: sbUser.email,
-              username: sbUser.email?.split('@')[0] || `user_${sbUser.id.substring(0, 5)}`,
-              display_name: sbUser.user_metadata?.display_name || sbUser.email?.split('@')[0] || 'Usuario',
-              avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sbUser.id}`
-            }])
-            .select()
+            .select('*')
+            .eq('id', sbUser.id)
             .maybeSingle();
           
-          if (newProfile) {
-            console.log('New profile created successfully');
-            setUser(newProfile);
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          }
+
+          if (profile) {
+            console.log('User profile loaded successfully');
+            
+            if (profile.is_blocked && !profile.is_super_admin) {
+              console.log('User is blocked, signing out...');
+              await logout();
+              return;
+            }
+
+            const counts = await dataService.getUserCounts(sbUser.id).catch(() => ({ followers: 0, following: 0, total_likes: 0 }));
+            const userWithRoles = {
+              ...profile,
+              is_admin: profile.is_admin || profile.is_super_admin,
+              followers_count: counts.followers,
+              following_count: counts.following,
+              total_likes_received: counts.total_likes,
+              is_optimistic: false
+            };
+            setUser(userWithRoles);
           } else {
-            console.warn('Could not create profile, using fallback state', insertError);
-            throw new Error('Profile creation failed');
+            // Si no hay perfil, intentamos crearlo pero no bloqueamos al usuario
+            console.log('Profile not found, creating in background...');
+            const { data: newProfile } = await supabase
+              .from('profiles')
+              .insert([{
+                id: sbUser.id,
+                email: sbUser.email,
+                username: sbUser.email?.split('@')[0] || `user_${sbUser.id.substring(0, 5)}`,
+                display_name: sbUser.user_metadata?.display_name || sbUser.email?.split('@')[0] || 'Usuario',
+                avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sbUser.id}`
+              }])
+              .select()
+              .maybeSingle();
+            
+            if (newProfile) {
+              setUser({ ...newProfile, is_optimistic: false } as any);
+            }
           }
         } catch (err) {
-          console.warn('Fallback to basic user object');
-          const fallbackUser = {
-            id: sbUser.id,
-            email: sbUser.email || '',
-            username: sbUser.email?.split('@')[0] || 'usuario',
-            display_name: 'Usuario',
-            avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${sbUser.id}`,
-            created_at: new Date().toISOString(),
-            is_admin: false,
-            is_super_admin: false,
-            is_verified: false
-          };
-          setUser(fallbackUser as any);
+          console.warn('Background profile load failed, keeping optimistic state', err);
         }
-      }
+      };
+
+      // Disparamos la carga completa sin await para no bloquear
+      loadFullProfile();
+
     } catch (error) {
       console.error('Refresh user critical failure:', error);
     } finally {
