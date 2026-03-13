@@ -320,7 +320,7 @@ const AppContent = () => {
         is_super_admin: user.is_super_admin
       });
     }
-  }, [user]);
+  }, [user?.id]);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 

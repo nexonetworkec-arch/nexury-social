@@ -14,19 +14,21 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.id) {
       setOnlineUsers(new Set());
       return;
     }
 
-    // 1. Marcar como online en la DB
-    dataService.updateUserStatus(user.id, true);
+    const userId = user.id;
+
+    // 1. Marcar como online en la DB (solo una vez al montar o cambiar de usuario)
+    dataService.updateUserStatus(userId, true);
 
     // 2. Configurar Supabase Presence
     const channel = supabase.channel('global_presence', {
       config: {
         presence: {
-          key: user.id,
+          key: userId,
         },
       },
     });
@@ -46,7 +48,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
-            user_id: user.id,
+            user_id: userId,
             online_at: new Date().toISOString(),
           });
         }
@@ -54,7 +56,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // 3. Limpieza al desconectar
     const handleTabClose = () => {
-      dataService.updateUserStatus(user.id, false);
+      dataService.updateUserStatus(userId, false);
     };
 
     window.addEventListener('beforeunload', handleTabClose);
@@ -62,9 +64,9 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       window.removeEventListener('beforeunload', handleTabClose);
       channel.unsubscribe();
-      dataService.updateUserStatus(user.id, false);
+      dataService.updateUserStatus(userId, false);
     };
-  }, [user]);
+  }, [user?.id]);
 
   return (
     <PresenceContext.Provider value={{ onlineUsers }}>

@@ -31,17 +31,18 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
+      const userId = user.id;
       fetchCounts();
 
       // Listen for new notifications
       const notifChannel = supabase
-        .channel(`notifications_count:${user.id}`)
+        .channel(`notifications_count:${userId}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${userId}`
         }, () => {
           fetchCounts();
         })
@@ -49,7 +50,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
       // Listen for new messages
       const msgChannel = supabase
-        .channel(`messages_count:${user.id}`)
+        .channel(`messages_count:${userId}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -67,7 +68,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       setUnreadNotificationsCount(0);
       setUnreadMessagesCount(0);
     }
-  }, [user]);
+  }, [user?.id]);
 
   return (
     <NotificationContext.Provider value={{

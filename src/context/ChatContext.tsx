@@ -64,13 +64,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchConversations();
       
       // Subscribe to new messages to refresh conversations
-      // We listen to the conversations table since it's updated on every new message
       const channel = supabase
-        .channel('chat_updates')
+        .channel(`chat_updates:${user.id}`)
         .on('postgres_changes', { 
           event: 'UPDATE', 
           schema: 'public', 
@@ -87,7 +86,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       setConversations([]);
       setActiveChats([]);
     }
-  }, [user]);
+  }, [user?.id]);
 
   const openChat = (userId: string) => {
     if (!user || userId === user.id) return; // Prevent self-messaging

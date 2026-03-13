@@ -341,9 +341,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('Profile updated in real-time:', payload.new);
           setUser(prev => {
             if (!prev) return payload.new as User;
+            
+            // Verificar si realmente hay cambios significativos para evitar re-renders innecesarios
+            const hasChanges = 
+              payload.new.display_name !== prev.display_name ||
+              payload.new.avatar_url !== prev.avatar_url ||
+              payload.new.bio !== prev.bio ||
+              payload.new.is_verified !== prev.is_verified ||
+              payload.new.is_admin !== prev.is_admin ||
+              payload.new.is_super_admin !== prev.is_super_admin ||
+              payload.new.followers_count !== prev.followers_count ||
+              payload.new.following_count !== prev.following_count ||
+              payload.new.total_likes_received !== prev.total_likes_received;
+
+            if (!hasChanges) return prev;
+
             return { 
               ...prev, 
               ...payload.new,
+              // Asegurar que los contadores se mantengan si no vienen en el payload
               followers_count: payload.new.followers_count !== undefined ? payload.new.followers_count : prev.followers_count,
               following_count: payload.new.following_count !== undefined ? payload.new.following_count : prev.following_count,
               total_likes_received: payload.new.total_likes_received !== undefined ? payload.new.total_likes_received : prev.total_likes_received
