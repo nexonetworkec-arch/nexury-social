@@ -6,7 +6,11 @@ import { supabase } from '../lib/supabase';
 
 export const dataService = {
   // POSTS
-  async getPosts(currentUserId?: string): Promise<Post[]> {
+  async getPosts(currentUserId?: string, type: 'recent' | 'smart' = 'recent'): Promise<Post[]> {
+    if (type === 'smart') {
+      return this.getSmartPosts(currentUserId);
+    }
+
     const { data, error } = await supabase
       .from('posts')
       .select(`
@@ -15,7 +19,8 @@ export const dataService = {
           username,
           display_name,
           avatar_url,
-          is_verified
+          is_verified,
+          is_super_admin
         )
       `)
       .order('created_at', { ascending: false })
@@ -31,23 +36,132 @@ export const dataService = {
       is_verified: !!post.profiles?.is_verified
     }));
 
-    if (currentUserId) {
-      // Si hay un usuario logueado, verificamos qué posts ha likeado
-      const postIds = posts.map(p => p.id);
-      const { data: likes } = await supabase
-        .from('likes')
-        .select('post_id')
-        .eq('user_id', currentUserId)
-        .in('post_id', postIds);
-      
-      const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
-      return posts.map(p => ({
-        ...p,
-        user_has_liked: likedPostIds.has(p.id)
-      }));
+    return this.enrichPostsWithLikes(posts, currentUserId);
+  },
+
+  async getUserPosts(userId: string, currentUserId?: string): Promise<Post[]> {
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles:user_id (
+          username,
+          display_name,
+          avatar_url,
+          is_verified,
+          is_super_admin
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    const posts = (data || []).map((post: any) => ({
+      ...post,
+      username: post.profiles?.username,
+      display_name: post.profiles?.display_name,
+      avatar_url: post.profiles?.avatar_url,
+      is_verified: !!post.profiles?.is_verified
+    }));
+
+    return this.enrichPostsWithLikes(posts, currentUserId);
+  },
+
+  async getSmartPosts(currentUserId?: string): Promise<Post[]> {
+    // Obtener configuración global para los multiplicadores
+    const settings = await this.getGlobalSettings();
+    const isSmartEnabled = settings.smart_feed_enabled ?? true;
+    const verifiedBoostMultiplier = settings.verified_boost ?? 1.5;
+    const adminBoostMultiplier = settings.admin_boost ?? 3.0;
+
+    if (!isSmartEnabled) {
+      return this.getPosts(currentUserId, 'recent');
     }
 
-    return posts;
+    // Para una implementación real de alto rendimiento, esto debería ser un RPC en SQL.
+    // Aquí lo implementamos en JS para demostrar el algoritmo.
+    const { data, error } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        profiles:user_id (
+          username,
+          display_name,
+          avatar_url,
+          is_verified,
+          is_super_admin
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100); // Traemos más para poder rankear
+
+    if (error) throw error;
+
+    const now = new Date();
+    const posts = (data || []).map((post: any) => {
+      const createdAt = new Date(post.created_at);
+      const hoursOld = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      
+      // Algoritmo inspirado en X (Twitter)
+      // Score base por interacción
+      const interactionScore = 
+        (post.likes_count * 50) + 
+        (post.comments_count * 30) + 
+        (post.views_count * 2);
+      
+      // Bonus por multimedia
+      const mediaBonus = post.image_url ? 1.2 : 1.0;
+      
+      // Bonus por verificado
+      const verifiedBonus = post.profiles?.is_verified ? verifiedBoostMultiplier : 1.0;
+
+      // Super Admin visibility boost (Prioridad máxima)
+      const superAdminBonus = post.profiles?.is_super_admin ? adminBoostMultiplier : 1.0;
+      
+      // Decaimiento temporal (Gravity)
+      // A mayor tiempo, el score baja exponencialmente
+      const gravity = 1.8;
+      const timeDecay = Math.pow(hoursOld + 2, gravity);
+      
+      const finalScore = (interactionScore * mediaBonus * verifiedBonus * superAdminBonus) / timeDecay;
+
+      return {
+        ...post,
+        username: post.profiles?.username,
+        display_name: post.profiles?.display_name,
+        avatar_url: post.profiles?.avatar_url,
+        is_verified: !!post.profiles?.is_verified,
+        _score: finalScore
+      };
+    });
+
+    // Ordenar por score y tomar los mejores 50
+    const sortedPosts = posts
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 50);
+
+    return this.enrichPostsWithLikes(sortedPosts, currentUserId);
+  },
+
+  async enrichPostsWithLikes(posts: Post[], currentUserId?: string): Promise<Post[]> {
+    if (!currentUserId || posts.length === 0) {
+      return posts.map(p => ({ ...p, user_has_liked: false }));
+    }
+
+    const postIds = posts.map(p => p.id);
+    const { data: likes } = await supabase
+      .from('likes')
+      .select('post_id')
+      .eq('user_id', currentUserId)
+      .in('post_id', postIds);
+    
+    const likedPostIds = new Set(likes?.map(l => l.post_id) || []);
+    return posts.map(p => ({
+      ...p,
+      user_has_liked: likedPostIds.has(p.id)
+    }));
   },
 
   async createPost(userId: string, content: string, imageUrl?: string, mediaType: 'image' | 'video' = 'image', showAppointmentButton: boolean = false): Promise<Post> {

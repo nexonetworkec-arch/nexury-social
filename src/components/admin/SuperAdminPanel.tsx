@@ -52,7 +52,10 @@ export const SuperAdminPanel = () => {
     maintenanceMode: false,
     registrationsOpen: true,
     emailNotifications: true,
-    aiModeration: true
+    aiModeration: true,
+    smartFeedEnabled: true,
+    verifiedBoost: 1.5,
+    adminBoost: 3.0
   });
   const [newBenefit, setNewBenefit] = useState({
     slug: '',
@@ -96,7 +99,10 @@ export const SuperAdminPanel = () => {
         maintenanceMode: settings.maintenance_mode,
         registrationsOpen: settings.registrations_open,
         emailNotifications: settings.email_notifications,
-        aiModeration: settings.ai_moderation
+        aiModeration: settings.ai_moderation,
+        smartFeedEnabled: settings.smart_feed_enabled ?? true,
+        verifiedBoost: settings.verified_boost ?? 1.5,
+        adminBoost: settings.admin_boost ?? 3.0
       });
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -112,7 +118,10 @@ export const SuperAdminPanel = () => {
         maintenance_mode: globalSettings.maintenanceMode,
         registrations_open: globalSettings.registrationsOpen,
         email_notifications: globalSettings.emailNotifications,
-        ai_moderation: globalSettings.aiModeration
+        ai_moderation: globalSettings.aiModeration,
+        smart_feed_enabled: globalSettings.smartFeedEnabled,
+        verified_boost: globalSettings.verifiedBoost,
+        admin_boost: globalSettings.adminBoost
       });
       alert('Configuración global actualizada correctamente.');
     } catch (error) {
@@ -863,6 +872,63 @@ export const SuperAdminPanel = () => {
                             globalSettings.aiModeration ? "right-1" : "left-1"
                           )} />
                         </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 ml-1">Optimización del Algoritmo</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                          <div>
+                            <p className="font-bold text-slate-900">Smart Feed (Para ti)</p>
+                            <p className="text-xs text-slate-500">Activar el algoritmo de recomendación inteligente.</p>
+                          </div>
+                          <button 
+                            onClick={() => setGlobalSettings(prev => ({...prev, smartFeedEnabled: !prev.smartFeedEnabled}))}
+                            className={cn(
+                              "w-14 h-7 rounded-full transition-all relative",
+                              globalSettings.smartFeedEnabled ? "bg-indigo-600" : "bg-slate-200"
+                            )}
+                          >
+                            <div className={cn(
+                              "absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm",
+                              globalSettings.smartFeedEnabled ? "right-1" : "left-1"
+                            )} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Boost Verificados (x)</label>
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="range" 
+                                min="1" 
+                                max="5" 
+                                step="0.1"
+                                value={globalSettings.verifiedBoost}
+                                onChange={e => setGlobalSettings(prev => ({...prev, verifiedBoost: parseFloat(e.target.value)}))}
+                                className="flex-1 accent-indigo-600"
+                              />
+                              <span className="text-sm font-bold text-indigo-600 w-8">{globalSettings.verifiedBoost}x</span>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Boost Super Admin (x)</label>
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type="range" 
+                                min="1" 
+                                max="10" 
+                                step="0.5"
+                                value={globalSettings.adminBoost}
+                                onChange={e => setGlobalSettings(prev => ({...prev, adminBoost: parseFloat(e.target.value)}))}
+                                className="flex-1 accent-rose-600"
+                              />
+                              <span className="text-sm font-bold text-rose-600 w-8">{globalSettings.adminBoost}x</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
 

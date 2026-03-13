@@ -78,8 +78,8 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
         }
 
         // Fetch user posts
-        const allPosts = await dataService.getPosts(currentUser?.id);
-        setPosts(allPosts.filter(p => p.user_id === targetId));
+        const userPosts = await dataService.getUserPosts(targetId, currentUser?.id);
+        setPosts(userPosts);
 
         // Fetch benefits if verified
         if (userData.is_verified) {

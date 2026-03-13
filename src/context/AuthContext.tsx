@@ -251,6 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let isInitialCheckDone = false;
 
     // Escuchar cambios en la autenticación de Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -258,39 +259,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user && mounted) {
-          console.log('User session active, refreshing user data...');
-          await refreshUser();
+          // Solo refrescar si no es la carga inicial (que ya lo hace checkSession)
+          // o si el usuario actual es diferente
+          if (isInitialCheckDone) {
+            console.log('User session active, refreshing user data...');
+            await refreshUser();
+          }
         }
       }
       
       if (event === 'SIGNED_OUT' && mounted) {
         console.log('User signed out');
         setUser(null);
+        setLoading(false);
       }
 
       if (event === 'PASSWORD_RECOVERY' && mounted) {
         console.log('Password recovery mode active');
         setRecoveryMode(true);
-      }
-
-      if (mounted) {
-        console.log('Setting loading to false from onAuthStateChange');
         setLoading(false);
       }
     });
 
     // Verificación inicial de sesión
     const checkSession = async () => {
+      if (!mounted) return;
       console.log('Checking initial session...');
       try {
-        const result = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<any>((resolve) => 
-            setTimeout(() => resolve({ data: { session: null }, error: new Error('Timeout getSession') }), 5000)
-          )
-        ]);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        const session = result?.data?.session;
+        if (error) throw error;
+
         if (session && mounted) {
           console.log('Session found, refreshing user...');
           await refreshUser();
@@ -301,6 +300,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error checking session:', err);
       } finally {
         if (mounted) {
+          isInitialCheckDone = true;
           console.log('Initial session check finished');
           setLoading(false);
         }
@@ -311,7 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Timeout de seguridad para evitar carga infinita
     const timeout = setTimeout(() => {
-      if (mounted) {
+      if (mounted && !isInitialCheckDone) {
         console.warn('Safety timeout triggered: forcing loading to false');
         setLoading(false);
       }

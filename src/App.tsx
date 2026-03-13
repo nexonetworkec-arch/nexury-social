@@ -41,13 +41,16 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
   const [error, setError] = useState<string | null>(null);
   const [userResults, setUserResults] = useState<any[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [feedType, setFeedType] = useState<'recent' | 'smart'>('smart');
 
   useEffect(() => {
+    let mounted = true;
     const fetchContent = async () => {
+      if (!mounted) return;
       setLoading(true);
       setError(null);
       try {
-        const postsPromise = dataService.getPosts(user?.id);
+        const postsPromise = dataService.getPosts(user?.id, feedType);
         const adsPromise = dataService.getAds().catch(err => {
           console.warn('Ads table might be missing or inaccessible:', err);
           return [];
@@ -58,13 +61,19 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
           adsPromise
         ]);
         
-        setPosts(postsData);
-        setAds((adsData || []).filter((ad: any) => ad.is_active));
+        if (mounted) {
+          setPosts(postsData);
+          setAds((adsData || []).filter((ad: any) => ad.is_active));
+        }
       } catch (error: any) {
         console.error('Failed to fetch feed content', error);
-        setError(error.message || 'Error al cargar las publicaciones');
+        if (mounted) {
+          setError(error.message || 'Error al cargar las publicaciones');
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -72,7 +81,9 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
 
     // Safety timeout
     const timeout = setTimeout(() => {
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     }, 8000);
 
     const channel = supabase
@@ -98,6 +109,7 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
 
           setPosts((prev) => {
             if (prev.some(p => p.id === newPost.id)) return prev;
+            // Si es feed reciente, lo ponemos arriba. Si es smart, lo ponemos arriba también por ahora
             return [{ ...newPost, user_has_liked: userHasLiked } as PostType, ...prev];
           });
         }
@@ -142,11 +154,12 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
       .subscribe();
 
     return () => {
+      mounted = false;
       supabase.removeChannel(channel);
       supabase.removeChannel(profileChannel);
       clearTimeout(timeout);
     };
-  }, [user]);
+  }, [user?.id, feedType]);
 
   const handlePostCreated = (newPost: PostType) => {
     setPosts((prev) => {
@@ -197,8 +210,8 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
 
   return (
     <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen pb-20 sm:pb-0 bg-white">
-      <header className="sticky top-0 z-40 glass p-4 sm:p-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-40 glass flex flex-col">
+        <div className="p-4 sm:p-5 flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl font-bold font-display brand-text-gradient">
             {searchQuery ? `Resultados para "${searchQuery}"` : 'Inicio'}
           </h1>
@@ -209,8 +222,31 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
           )}
         </div>
 
+        {!searchQuery && (
+          <div className="flex border-b border-slate-100">
+            <button 
+              onClick={() => setFeedType('smart')}
+              className={`flex-1 py-4 text-sm font-bold transition-colors relative ${feedType === 'smart' ? 'text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              Para ti
+              {feedType === 'smart' && (
+                <motion.div layoutId="activeTab" className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-indigo-600 rounded-full" />
+              )}
+            </button>
+            <button 
+              onClick={() => setFeedType('recent')}
+              className={`flex-1 py-4 text-sm font-bold transition-colors relative ${feedType === 'recent' ? 'text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              Recientes
+              {feedType === 'recent' && (
+                <motion.div layoutId="activeTab" className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-indigo-600 rounded-full" />
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Mobile Search Bar */}
-        <div className="xl:hidden relative group">
+        <div className="xl:hidden p-4 pt-0 relative group">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
           <input 
             type="text" 
@@ -397,27 +433,12 @@ const AppContent = () => {
   const renderView = () => {
     switch (currentView) {
       case 'Inicio':
-        const homeSchema = {
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          "name": "Nexury",
-          "url": window.location.origin,
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": `${window.location.origin}/?q={search_term_string}`,
-            "query-input": "required name=search_term_string"
-          }
-        };
         return (
-          <>
-            <SEO title="Inicio" schema={homeSchema} />
-            <Feed searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-          </>
+          <Feed searchQuery={searchQuery} onSearchChange={setSearchQuery} />
         );
       case 'Admin':
         return (
           <>
-            <SEO title="Panel de Administración" />
             {(user?.is_admin || user?.is_super_admin) ? (
               <AdminPanel />
             ) : (
@@ -428,7 +449,6 @@ const AppContent = () => {
       case 'SuperAdmin':
         return (
           <>
-            <SEO title="Super Admin" />
             {user?.is_super_admin ? (
               <SuperAdminPanel />
             ) : (
@@ -439,7 +459,6 @@ const AppContent = () => {
       case 'Explorar':
         return (
           <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white p-4 sm:p-8">
-            <SEO title="Explorar" />
             <h2 className="text-2xl font-bold mb-6">Explorar</h2>
             <div className="space-y-8">
               <section>
@@ -469,45 +488,27 @@ const AppContent = () => {
         );
       case 'Perfil':
         return (
-          <>
-            <SEO title={selectedUserId ? "Perfil de Usuario" : user.display_name} />
-            <ProfileView userId={selectedUserId} />
-          </>
+          <ProfileView userId={selectedUserId} />
         );
       case 'Mensajes':
         return (
-          <>
-            <SEO title="Mensajes" />
-            <MessagesView targetUserId={selectedUserId || undefined} />
-          </>
+          <MessagesView targetUserId={selectedUserId || undefined} />
         );
       case 'Notificaciones':
         return (
-          <>
-            <SEO title="Notificaciones" />
-            <NotificationsList />
-          </>
+          <NotificationsList />
         );
       case 'Guardados':
         return (
-          <>
-            <SEO title="Guardados" />
-            <BookmarksList />
-          </>
+          <BookmarksList />
         );
       case 'Citas':
         return (
-          <>
-            <SEO title="Mis Citas" />
-            <AppointmentsList />
-          </>
+          <AppointmentsList />
         );
       case 'Nexuarios':
         return (
-          <>
-            <SEO title="Nexuarios" />
-            <NexuariosList initialSearchQuery={searchQuery} />
-          </>
+          <NexuariosList initialSearchQuery={searchQuery} />
         );
       default:
         return (
@@ -529,9 +530,10 @@ const AppContent = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto flex justify-center min-h-screen bg-[#fafafa] relative">
+    <div className="max-w-7xl mx-auto flex justify-center min-h-screen bg-[#fafafa] relative overflow-x-hidden">
+      <SEO title={currentView} />
       <Sidebar currentView={currentView} onViewChange={navigateTo} />
-      <main className="flex-1 flex justify-center w-full">
+      <main className="flex-1 flex justify-center w-full min-h-screen">
         {renderView()}
       </main>
       <RightPanel searchQuery={searchQuery} onSearchChange={setSearchQuery} />
