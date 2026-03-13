@@ -3,6 +3,7 @@
   "short_name": "Nexury",
   "description": "La red social exclusiva para Nexuarios.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",

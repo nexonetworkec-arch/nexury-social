@@ -221,10 +221,10 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     "alternateName": profileUser.username,
     "description": profileUser.bio,
     "image": profileUser.avatar_url,
-    "url": `https://nexury-social.app/profile/${profileUser.username}`,
+    "url": `${window.location.origin}/profile/${profileUser.username}`,
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://nexury-social.app/profile/${profileUser.username}`
+      "@id": `${window.location.origin}/profile/${profileUser.username}`
     }
   };
 

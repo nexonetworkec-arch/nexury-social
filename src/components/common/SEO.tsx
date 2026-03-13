@@ -16,8 +16,8 @@ export const SEO: React.FC<SEOProps> = ({
   title = 'Nexury | Conecta con el mundo', 
   description = 'Nexury es la plataforma donde las ideas fluyen y las comunidades crecen.',
   keywords = 'red social, nexury, comunidad, compartir, noticias, tecnología',
-  image = 'https://picsum.photos/seed/nexury-og/1200/630',
-  url = 'https://nexury-social.app/',
+  image = 'https://api.dicebear.com/7.x/initials/png?seed=NX&backgroundColor=4f46e5&fontSize=50',
+  url = window.location.origin,
   type = 'website',
   author = 'Nexury Team',
   schema
@@ -30,7 +30,7 @@ export const SEO: React.FC<SEOProps> = ({
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Nexury",
-    "url": "https://nexury-social.app/",
+    "url": window.location.origin,
     "logo": "https://api.dicebear.com/7.x/initials/svg?seed=NX&backgroundColor=4f46e5&fontSize=50",
     "sameAs": [
       "https://twitter.com/nexury",

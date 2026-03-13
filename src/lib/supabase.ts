@@ -62,14 +62,19 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
         auth: {
           persistSession: true,
           autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: 'nexury-auth-token',
+        },
+        realtime: {
+          params: {
+            eventsPerSecond: 10,
+          },
         },
         global: {
+          headers: { 'x-application-name': 'nexury' },
           fetch: (url, options) => {
             return fetch(url, options).catch(err => {
               console.error('Supabase Fetch Error:', err);
-              if (err.message === 'Failed to fetch') {
-                console.error('CONSEJO: Esto suele significar que la URL de Supabase es incorrecta o inaccesible. Verifica VITE_SUPABASE_URL.');
-              }
               throw err;
             });
           }

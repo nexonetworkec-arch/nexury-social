@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error: authError } = await Promise.race([
         supabase.auth.getUser(),
         new Promise<{ data: { user: null }, error: any }>((resolve) => 
-          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 4000)
+          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 8000)
         )
       ]);
       
@@ -250,28 +250,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Escuchar cambios en la autenticación de Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user) {
+        if (session?.user && mounted) {
           console.log('User session active, refreshing user data...');
           await refreshUser();
         }
       }
       
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' && mounted) {
         console.log('User signed out');
         setUser(null);
       }
 
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' && mounted) {
         console.log('Password recovery mode active');
         setRecoveryMode(true);
       }
 
-      console.log('Setting loading to false from onAuthStateChange');
-      setLoading(false);
+      if (mounted) {
+        console.log('Setting loading to false from onAuthStateChange');
+        setLoading(false);
+      }
     });
 
     // Verificación inicial de sesión
@@ -281,12 +286,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const result = await Promise.race([
           supabase.auth.getSession(),
           new Promise<any>((resolve) => 
-            setTimeout(() => resolve({ data: { session: null }, error: new Error('Timeout getSession') }), 3000)
+            setTimeout(() => resolve({ data: { session: null }, error: new Error('Timeout getSession') }), 5000)
           )
         ]);
         
         const session = result?.data?.session;
-        if (session) {
+        if (session && mounted) {
           console.log('Session found, refreshing user...');
           await refreshUser();
         } else {
@@ -295,17 +300,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err) {
         console.error('Error checking session:', err);
       } finally {
-        console.log('Initial session check finished');
-        setLoading(false);
+        if (mounted) {
+          console.log('Initial session check finished');
+          setLoading(false);
+        }
       }
     };
 
     checkSession();
 
-    // Suscribirse a cambios en el perfil del usuario actual
+    // Timeout de seguridad para evitar carga infinita
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        console.warn('Safety timeout triggered: forcing loading to false');
+        setLoading(false);
+      }
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // Suscribirse a cambios en el perfil del usuario actual (en un efecto separado)
+  useEffect(() => {
     let profileSubscription: any = null;
     
     if (user?.id) {
+      console.log('Setting up real-time profile subscription for:', user.id);
       profileSubscription = supabase
         .channel(`public:profiles:id=eq.${user.id}`)
         .on('postgres_changes', { 
@@ -320,7 +344,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return { 
               ...prev, 
               ...payload.new,
-              // Asegurar que los contadores se mantengan si vienen en el payload
               followers_count: payload.new.followers_count !== undefined ? payload.new.followers_count : prev.followers_count,
               following_count: payload.new.following_count !== undefined ? payload.new.following_count : prev.following_count,
               total_likes_received: payload.new.total_likes_received !== undefined ? payload.new.total_likes_received : prev.total_likes_received
@@ -330,16 +353,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .subscribe();
     }
 
-    // Timeout de seguridad para evitar carga infinita
-    const timeout = setTimeout(() => {
-      console.warn('Safety timeout triggered: forcing loading to false');
-      setLoading(false);
-    }, 6000);
-
     return () => {
-      subscription.unsubscribe();
-      if (profileSubscription) supabase.removeChannel(profileSubscription);
-      clearTimeout(timeout);
+      if (profileSubscription) {
+        console.log('Cleaning up profile subscription');
+        supabase.removeChannel(profileSubscription);
+      }
     };
   }, [user?.id]);
 

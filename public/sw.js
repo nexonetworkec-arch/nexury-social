@@ -20,7 +20,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 2. Lógica de Notificaciones Push (Tu código)
+// 2. Lógica de Notificaciones Push
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 

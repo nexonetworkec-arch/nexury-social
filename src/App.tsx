@@ -401,10 +401,10 @@ const AppContent = () => {
           "@context": "https://schema.org",
           "@type": "WebSite",
           "name": "Nexury",
-          "url": "https://nexury-social.app/",
+          "url": window.location.origin,
           "potentialAction": {
             "@type": "SearchAction",
-            "target": "https://nexury-social.app/?q={search_term_string}",
+            "target": `${window.location.origin}/?q={search_term_string}`,
             "query-input": "required name=search_term_string"
           }
         };
