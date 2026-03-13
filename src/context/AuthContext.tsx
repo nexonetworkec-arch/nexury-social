@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error: authError } = await Promise.race([
         supabase.auth.getUser(),
         new Promise<{ data: { user: null }, error: any }>((resolve) => 
-          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 8000)
+          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 15000)
         )
       ]);
       
