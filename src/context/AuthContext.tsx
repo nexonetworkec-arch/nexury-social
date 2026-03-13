@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [recoveryMode, setRecoveryMode] = useState(false);
   const refreshingRef = useRef(false);
+  const userIdRef = useRef<string | null>(null);
 
   const login = async (credentials: { email: string, password: string }) => {
     try {
@@ -48,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       if (data.session) {
-        await refreshUser();
+        await refreshUser(data.session.user);
       }
       
       localStorage.setItem('nexury_email', credentials.email);
@@ -60,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = async (sbUserOverride?: any) => {
     if (refreshingRef.current) {
       console.log('Refresh user already in progress, skipping...');
       return;
@@ -69,23 +70,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshingRef.current = true;
     console.log('Refreshing user data...');
     try {
-      // Timeout de 8 segundos para la llamada a Supabase
-      const { data, error: authError } = await Promise.race([
-        supabase.auth.getUser(),
-        new Promise<{ data: { user: null }, error: any }>((resolve) => 
-          setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 8000)
-        )
-      ]);
+      let sbUser = sbUserOverride;
       
-      const sbUser = data?.user;
+      if (!sbUser) {
+        // Timeout de 8 segundos para la llamada a Supabase
+        const { data, error: authError } = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<{ data: { user: null }, error: any }>((resolve) => 
+            setTimeout(() => resolve({ data: { user: null }, error: new Error('Timeout calling getUser') }), 8000)
+          )
+        ]);
+        
+        if (authError) {
+          console.log('Auth error during refresh:', authError);
+          // Si es un timeout y ya tenemos un usuario, no lo borramos inmediatamente
+          if (authError.message === 'Timeout calling getUser' && userIdRef.current) {
+            console.log('Timeout but user exists, keeping current state');
+            return;
+          }
+          setUser(null);
+          userIdRef.current = null;
+          return;
+        }
+        sbUser = data?.user;
+      }
       
-      if (authError || !sbUser) {
-        console.log('No active session or auth error:', authError);
+      if (!sbUser) {
+        console.log('No active session found');
         setUser(null);
+        userIdRef.current = null;
         return;
       }
 
       console.log('Auth user found:', sbUser.id);
+      userIdRef.current = sbUser.id;
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -187,7 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Si hay sesión inmediata (confirm_email desactivado en Supabase)
       if (sbData.session) {
-        await refreshUser();
+        await refreshUser(sbData.session.user);
         return { needsConfirmation: false } as any;
       }
 
@@ -207,6 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
       setUser(null);
+      userIdRef.current = null;
       localStorage.removeItem('nexury_email');
     } catch (error) {
       console.warn('Supabase signout failed', error);
@@ -266,11 +285,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user && mounted) {
-          // Solo refrescar si no es la carga inicial o si el usuario actual es diferente
+          // Solo refrescar si el usuario ID es diferente al que ya tenemos cargado
           // Esto evita el bucle infinito y llamadas redundantes
-          if (isInitialCheckDone) {
-            console.log('User session active, refreshing user data...');
-            await refreshUser();
+          if (session.user.id !== userIdRef.current) {
+            console.log('User session active and ID changed, refreshing user data...');
+            await refreshUser(session.user);
+          } else {
+            console.log('Auth state changed but user ID is the same, skipping refresh');
           }
         }
       }
@@ -278,6 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (event === 'SIGNED_OUT' && mounted) {
         console.log('User signed out');
         setUser(null);
+        userIdRef.current = null;
         setLoading(false);
       }
 
@@ -299,10 +321,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (session && mounted) {
           console.log('Session found, refreshing user...');
-          await refreshUser();
+          await refreshUser(session.user);
         } else {
           console.log('No initial session found');
           setUser(null);
+          userIdRef.current = null;
         }
       } catch (err) {
         console.error('Error checking session:', err);
