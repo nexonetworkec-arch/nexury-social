@@ -1096,11 +1096,11 @@ export const SuperAdminPanel = () => {
                             onClick={() => handleToggleVerify(u.id, u.is_verified)}
                             className={cn(
                               "p-2 rounded-xl transition-all",
-                              u.is_verified ? "text-indigo-600 bg-indigo-50" : "text-slate-400 hover:bg-slate-50"
+                              u.is_verified ? "text-rose-600 bg-rose-50" : "text-indigo-600 bg-indigo-50"
                             )}
                             title={u.is_verified ? "Quitar Verificación" : "Verificar Cuenta"}
                           >
-                            <ShieldCheck size={18} />
+                            {u.is_verified ? <ShieldOff size={18} /> : <ShieldCheck size={18} />}
                           </button>
                           <button 
                             onClick={() => setConfirmModal({ isOpen: true, targetId: u.id, action: u.is_blocked ? 'unblock-user' : 'block-user' })}

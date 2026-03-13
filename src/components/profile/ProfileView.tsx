@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Calendar, LogOut, Shield, ShieldAlert, Heart, BarChart2, MessageSquare, Star, Award, Headphones, Video, ShieldOff, Palette, CheckCircle2, Bell } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Star, Award, Headphones, Video, ShieldOff, Palette, Settings, BarChart2, MessageSquare, Shield, ShieldAlert, Heart, Calendar, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { dataService } from '../../services/dataService';
 import { pushNotificationService } from '../../services/pushNotificationService';
-import { VerifiedBadge } from '../ui/VerifiedBadge';
-import { UserStatus } from '../ui/UserStatus';
 import { SEO } from '../common/SEO';
 import { Post as PostType, VerifiedBenefit } from '../../types';
 import { Post as FeedPost } from '../feed/Post';
 import { EditProfileModal } from './EditProfileModal';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { supabase } from '../../lib/supabase';
+import { ProfileHeader } from './ProfileHeader';
+import { ProfileActions } from './ProfileActions';
+import { AdminActions } from './AdminActions';
 
 const ICON_MAP: Record<string, any> = {
   Star, Award, Headphones, Video, ShieldOff, Palette, Settings, BarChart2, MessageSquare, Shield, ShieldAlert, Heart, Calendar, Bell
@@ -25,10 +25,13 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   const [benefits, setBenefits] = useState<VerifiedBenefit[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [isRequestingVerification, setIsRequestingVerification] = useState(false);
   const [following, setFollowing] = useState(false);
   const [stats, setStats] = useState({ followers: 0, following: 0, total_likes: 0 });
-  const [isAppointmentsEnabled, setIsAppointmentsEnabled] = useState(false);
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'denied'
   );
@@ -46,13 +49,65 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     }
   };
 
-  useEffect(() => {
-    const checkBenefit = async () => {
-      const active = await dataService.isBenefitActive('appointments');
-      setIsAppointmentsEnabled(active);
-    };
-    checkBenefit();
-  }, []);
+  const handleToggleVerify = async () => {
+    if (!currentUser || !profileUser) return;
+    try {
+      await dataService.verifyUser(profileUser.id, !profileUser.is_verified);
+      setProfileUser({ ...profileUser, is_verified: !profileUser.is_verified });
+      setIsAdminMenuOpen(false);
+    } catch (error) {
+      console.error('Error toggling verification', error);
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!currentUser || !profileUser) return;
+    try {
+      await dataService.blockUser(profileUser.id, !profileUser.is_blocked);
+      setProfileUser({ ...profileUser, is_blocked: !profileUser.is_blocked });
+      setIsAdminMenuOpen(false);
+    } catch (error) {
+      console.error('Error blocking user', error);
+    }
+  };
+
+  const handleReportUser = async () => {
+    if (!currentUser || !profileUser) return;
+    const reason = window.prompt('¿Por qué deseas reportar a este usuario?');
+    if (!reason) return;
+    try {
+      await dataService.reportUser(profileUser.id, currentUser.id, reason);
+      alert('Gracias por tu reporte. Lo revisaremos pronto.');
+      setIsUserMenuOpen(false);
+      setIsAdminMenuOpen(false);
+    } catch (error) {
+      console.error('Error reporting user', error);
+    }
+  };
+
+  const handlePersonalBlock = async () => {
+    if (!currentUser || !profileUser) return;
+    if (!window.confirm('¿Estás seguro de bloquear a este usuario? No verás sus publicaciones ni podrá contactarte.')) return;
+    try {
+      await dataService.blockUserPersonal(currentUser.id, profileUser.id);
+      alert('Usuario bloqueado.');
+      setIsUserMenuOpen(false);
+      setIsAdminMenuOpen(false);
+    } catch (error) {
+      console.error('Error blocking user personally', error);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!currentUser || !profileUser) return;
+    if (!window.confirm('¿Estás seguro de eliminar permanentemente este usuario? Esta acción no se puede deshacer.')) return;
+    try {
+      await dataService.deleteUser(profileUser.id);
+      window.dispatchEvent(new CustomEvent('changeView', { detail: 'Home' }));
+    } catch (error) {
+      console.error('Error deleting user', error);
+    }
+  };
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -67,7 +122,6 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
         setProfileUser(userData);
         setStats(userStats);
 
-        // Registrar vista única si no es su propio perfil
         if (!isOwnProfile && currentUser && targetId) {
           dataService.recordUniqueView(currentUser.id, targetId, 'profile');
         }
@@ -77,11 +131,9 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
           setFollowing(isFollowing);
         }
 
-        // Fetch user posts
         const userPosts = await dataService.getUserPosts(targetId, currentUser?.id);
         setPosts(userPosts);
 
-        // Fetch benefits if verified
         if (userData.is_verified) {
           const allBenefits = await dataService.getVerifiedBenefits();
           setBenefits(allBenefits.filter(b => b.is_active));
@@ -96,10 +148,8 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
 
     fetchProfileData();
 
-    // --- REAL-TIME LISTENERS ---
     if (!targetId) return;
 
-    // 1. Listen for profile changes
     const profileChannel = supabase
       .channel(`profile_view:${targetId}`)
       .on('postgres_changes', { 
@@ -118,7 +168,6 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
       })
       .subscribe();
 
-    // 2. Listen for post changes for this user
     const postsChannel = supabase
       .channel(`profile_posts:${targetId}`)
       .on('postgres_changes', { 
@@ -178,7 +227,6 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     setFollowing(newFollowingState);
     try {
       await dataService.followUser(currentUser.id, targetId);
-      // Actualizar contadores localmente
       setStats(prev => ({
         ...prev,
         followers: newFollowingState ? prev.followers + 1 : prev.followers - 1
@@ -195,6 +243,21 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   const handleMessage = async () => {
     if (!currentUser || !targetId) return;
     openChat(targetId);
+  };
+
+  const handleRequestVerification = async () => {
+    if (!currentUser || isRequestingVerification) return;
+    setIsRequestingVerification(true);
+    try {
+      await dataService.requestVerification(currentUser.id);
+      alert('Tu solicitud de verificación ha sido enviada con éxito. Los administradores la revisarán pronto.');
+      setIsSettingsOpen(false);
+    } catch (error) {
+      console.error('Error requesting verification', error);
+      alert('Hubo un error al enviar tu solicitud. Por favor, inténtalo de nuevo más tarde.');
+    } finally {
+      setIsRequestingVerification(false);
+    }
   };
 
   if (loading) {
@@ -229,13 +292,27 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   };
 
   return (
-    <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white p-4 sm:p-8 pb-24 sm:pb-8">
+    <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white p-4 sm:p-8 pb-24 sm:pb-8 relative">
       <SEO 
         title={profileUser.display_name} 
         description={profileUser.bio || `Perfil de ${profileUser.display_name} en Nexury`} 
         image={profileUser.avatar_url}
         type="profile"
         schema={profileSchema}
+      />
+
+      <AdminActions 
+        currentUser={currentUser}
+        profileUser={profileUser}
+        isAdminMenuOpen={isAdminMenuOpen}
+        setIsAdminMenuOpen={setIsAdminMenuOpen}
+        isUserMenuOpen={isUserMenuOpen}
+        setIsUserMenuOpen={setIsUserMenuOpen}
+        handleToggleVerify={handleToggleVerify}
+        handleBlockUser={handleBlockUser}
+        handleDeleteUser={handleDeleteUser}
+        handleReportUser={handleReportUser}
+        handlePersonalBlock={handlePersonalBlock}
       />
       
       <div className="flex flex-col items-center gap-4 sm:gap-6 mt-4">
@@ -250,87 +327,27 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
             </button>
           )}
         </div>
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">{profileUser.display_name}</h2>
-            {profileUser.is_verified && (
-              <VerifiedBadge size={20} showTooltip />
-            )}
-            <div className="flex gap-1">
-              {profileUser.is_super_admin ? (
-                <span className="px-2 py-0.5 bg-rose-50 text-rose-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Super Admin</span>
-              ) : profileUser.is_admin ? (
-                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-full uppercase tracking-wider">Admin</span>
-              ) : null}
-            </div>
-          </div>
-          <p className="text-slate-500 text-sm sm:text-base">@{profileUser.username}</p>
-          <div className="flex justify-center mt-1">
-            <UserStatus userId={profileUser.id} lastSeen={profileUser.last_seen} showText size="sm" />
-          </div>
-        </div>
+
+        <ProfileHeader profileUser={profileUser} />
+
         <p className="text-slate-700 text-center max-w-md text-sm sm:text-base px-4">{profileUser.bio || 'Sin biografía aún.'}</p>
         
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-2 w-full max-w-sm px-4">
-          {isOwnProfile ? (
-            <>
-              <div className="flex w-full gap-2">
-                <button 
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="flex-1 px-4 sm:px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors text-sm sm:text-base"
-                >
-                  Editar Perfil
-                </button>
-                {notificationStatus !== 'granted' && (
-                  <button 
-                    onClick={handleRequestNotifications}
-                    className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold rounded-xl transition-colors flex items-center justify-center"
-                    title="Activar Notificaciones"
-                  >
-                    <Bell size={20} />
-                  </button>
-                )}
-                {currentUser?.is_super_admin && (
-                  <button 
-                    onClick={() => {
-                      const event = new CustomEvent('changeView', { detail: 'SuperAdmin' });
-                      window.dispatchEvent(event);
-                    }}
-                    className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold rounded-xl transition-colors flex items-center justify-center"
-                    title="Configuración de Super Admin"
-                  >
-                    <Settings size={20} />
-                  </button>
-                )}
-              </div>
-              <button 
-                onClick={() => logout()}
-                className="w-full sm:w-auto px-6 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold rounded-xl transition-colors text-sm sm:text-base"
-              >
-                Cerrar Sesión
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                onClick={handleFollow}
-                className={`flex-1 min-w-[120px] px-4 sm:px-6 py-2.5 font-semibold rounded-xl transition-colors text-sm sm:text-base ${
-                  following 
-                    ? 'bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100'
-                }`}
-              >
-                {following ? 'Siguiendo' : 'Seguir'}
-              </button>
-              <button 
-                onClick={handleMessage}
-                className="flex-1 min-w-[120px] px-4 sm:px-6 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold rounded-xl transition-colors text-sm sm:text-base flex items-center justify-center gap-2"
-              >
-                <MessageSquare size={18} /> Mensaje
-              </button>
-            </>
-          )}
-        </div>
+        <ProfileActions 
+          isOwnProfile={isOwnProfile}
+          following={following}
+          handleFollow={handleFollow}
+          handleMessage={handleMessage}
+          setIsEditProfileOpen={setIsEditProfileOpen}
+          notificationStatus={notificationStatus}
+          handleRequestNotifications={handleRequestNotifications}
+          isSettingsOpen={isSettingsOpen}
+          setIsSettingsOpen={setIsSettingsOpen}
+          currentUser={currentUser}
+          profileUser={profileUser}
+          handleRequestVerification={handleRequestVerification}
+          isRequestingVerification={isRequestingVerification}
+          logout={logout}
+        />
 
         {profileUser.is_verified && benefits.length > 0 && (
           <div className="w-full max-w-md mt-6 px-4">
@@ -410,8 +427,11 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
           display_name: profileUser.display_name, 
           username: profileUser.username, 
           avatar_url: profileUser.avatar_url, 
+          email: profileUser.email || '',
           bio: profileUser.bio || '', 
-          is_admin: profileUser.is_admin ? 1 : 0, 
+          is_admin: !!profileUser.is_admin, 
+          is_verified: profileUser.is_verified,
+          is_super_admin: !!profileUser.is_super_admin,
           created_at: profileUser.created_at 
         }}
       />

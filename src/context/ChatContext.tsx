@@ -13,6 +13,7 @@ interface ChatConversation {
   last_message_time?: string;
   unread_count: number;
   is_online?: boolean;
+  is_verified?: boolean | number;
 }
 
 interface ChatContextType {
@@ -52,6 +53,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           last_message: conv.last_message,
           last_message_time: conv.last_message_at,
           unread_count: 0, // Logic for unread would go here
+          is_verified: otherUser?.is_verified
         };
       });
 

@@ -136,7 +136,7 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
       <RequestAppointmentModal 
         isOpen={isAppointmentModalOpen}
         onClose={() => setIsAppointmentModalOpen(false)}
-        targetUser={{ id, display_name: name, username, avatar_url: avatarUrl || '', bio: '', is_admin: 0, created_at: '' }}
+        targetUser={{ id, display_name: name, username, avatar_url: avatarUrl || '', email: '', bio: '', is_admin: false, created_at: '' }}
       />
     </div>
   );

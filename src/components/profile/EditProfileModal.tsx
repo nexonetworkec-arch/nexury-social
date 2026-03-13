@@ -105,31 +105,32 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-lg bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl z-[60] overflow-hidden border border-slate-100 max-h-[85vh] flex flex-col"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] sm:w-[calc(100%-2rem)] max-w-lg bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl z-[60] overflow-hidden border border-slate-100 h-auto max-h-[98vh] flex flex-col"
           >
-            {/* Header Fijo */}
-            <div className="p-6 sm:p-8 border-b border-slate-50 flex items-center justify-between bg-white shrink-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Editar Perfil</h2>
+            {/* Header Fijo - Altura mínima necesaria */}
+            <div className="p-3 sm:p-5 border-b border-slate-50 flex items-center justify-between bg-white shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">Editar Perfil</h2>
               <button 
                 onClick={onClose}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+                className="p-1.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
               >
-                <X size={24} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* Body Scrolleable */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar">
-              <form id="edit-profile-form" onSubmit={handleSubmit} className="space-y-5 sm:space-y-6 pb-4">
-                <div className="flex flex-col items-center gap-4 mb-6 sm:mb-8">
+            {/* Body Adaptable Absoluto */}
+            <div className="flex-1 overflow-hidden p-3 sm:p-5 flex flex-col min-h-0">
+              <form id="edit-profile-form" onSubmit={handleSubmit} className="flex flex-col h-full gap-2 sm:gap-3 min-h-0">
+                {/* Avatar Section - Altura dinámica */}
+                <div className="flex flex-col items-center gap-2 shrink-0">
                   <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <img 
                       src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} 
-                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] sm:rounded-[2.5rem] object-cover border-4 border-white shadow-xl transition-transform group-hover:scale-105" 
+                      className="w-[15vh] h-[15vh] max-w-[80px] max-h-[80px] sm:max-w-[100px] sm:max-h-[100px] rounded-[1.2rem] sm:rounded-[1.5rem] object-cover border-2 border-white shadow-lg transition-transform group-hover:scale-105" 
                       alt="Avatar Preview" 
                     />
-                    <div className="absolute inset-0 bg-black/30 rounded-[2rem] sm:rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Camera className="text-white" size={28} />
+                    <div className="absolute inset-0 bg-black/30 rounded-[1.2rem] sm:rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Camera className="text-white" size={20} />
                     </div>
                   </div>
                   <input 
@@ -147,13 +148,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     capture="user"
                     onChange={handleFileChange} 
                   />
-                  <div className="w-full grid grid-cols-2 gap-3">
+                  <div className="w-full grid grid-cols-2 gap-2 max-w-[280px]">
                     <Button 
                       type="button"
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
-                      className="rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm h-11"
-                      leftIcon={<Upload size={16} />}
+                      className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 text-[9px] sm:text-[10px] h-8"
+                      leftIcon={<Upload size={12} />}
                     >
                       Galería
                     </Button>
@@ -161,52 +162,55 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                       type="button"
                       variant="outline"
                       onClick={() => cameraInputRef.current?.click()}
-                      className="rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 text-xs sm:text-sm h-11"
-                      leftIcon={<Camera size={16} />}
+                      className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 text-[9px] sm:text-[10px] h-8"
+                      leftIcon={<Camera size={12} />}
                     >
                       Cámara
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Nombre para mostrar</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Tu nombre público"
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-transparent rounded-2xl focus:ring-0 focus:border-indigo-500 transition-all text-slate-900 font-medium"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                    />
+                {/* Inputs - Altura compacta */}
+                <div className="grid grid-cols-1 gap-2 shrink-0">
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] font-bold text-slate-700 ml-1 uppercase tracking-wider">Nombre</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Tu nombre público"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border-2 border-transparent rounded-xl focus:ring-0 focus:border-indigo-500 transition-all text-slate-900 font-medium text-xs sm:text-sm"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <label className="text-[10px] font-bold text-slate-700 ml-1 uppercase tracking-wider">Usuario</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">@</span>
+                      <input
+                        type="text"
+                        required
+                        placeholder="usuario_unico"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 border-2 border-transparent rounded-xl focus:ring-0 focus:border-indigo-500 transition-all text-slate-900 font-medium text-xs sm:text-sm"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.replace(/\s+/g, '').toLowerCase())}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Nombre de usuario</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">@</span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="usuario_unico"
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-transparent rounded-2xl focus:ring-0 focus:border-indigo-500 transition-all text-slate-900 font-medium"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.replace(/\s+/g, '').toLowerCase())}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Biografía</label>
-                  <div className="relative">
-                    <FileText className="absolute left-4 top-4 text-slate-400" size={18} />
+                {/* Biografía - Altura elástica absoluta */}
+                <div className="flex-1 flex flex-col min-h-0 gap-0.5">
+                  <label className="text-[10px] font-bold text-slate-700 ml-1 uppercase tracking-wider shrink-0">Biografía</label>
+                  <div className="relative flex-1 min-h-0">
+                    <FileText className="absolute left-3 top-2.5 text-slate-400" size={14} />
                     <textarea
                       placeholder="Cuéntanos algo sobre ti..."
-                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-transparent rounded-2xl focus:ring-0 focus:border-indigo-500 transition-all resize-none text-slate-900 min-h-[120px]"
-                      rows={4}
+                      className="w-full h-full pl-9 pr-3 py-2 bg-slate-50 border-2 border-transparent rounded-xl focus:ring-0 focus:border-indigo-500 transition-all resize-none text-slate-900 text-xs sm:text-sm leading-relaxed"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                     />
@@ -215,9 +219,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
                 {error && (
                   <motion.p 
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-rose-500 text-sm font-bold text-center bg-rose-50 py-3 rounded-2xl border border-rose-100"
+                    className="text-rose-500 text-[9px] sm:text-[10px] font-bold text-center bg-rose-50 py-1.5 rounded-lg border border-rose-100 shrink-0"
                   >
                     {error}
                   </motion.p>
@@ -225,15 +229,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
               </form>
             </div>
 
-            {/* Footer Fijo */}
-            <div className="p-6 sm:p-8 border-t border-slate-50 bg-white shrink-0">
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            {/* Footer Fijo - Altura mínima */}
+            <div className="p-3 sm:p-5 border-t border-slate-50 bg-white shrink-0">
+              <div className="flex gap-2 sm:gap-3">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={onClose}
                   disabled={loading}
-                  className="flex-1 py-4 rounded-2xl order-2 sm:order-1 font-bold text-slate-500"
+                  className="flex-1 py-2.5 rounded-xl font-bold text-slate-500 text-xs sm:text-sm"
                 >
                   Cancelar
                 </Button>
@@ -241,10 +245,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                   form="edit-profile-form"
                   type="submit"
                   isLoading={loading}
-                  className="flex-1 py-4 rounded-2xl order-1 sm:order-2 font-bold shadow-lg shadow-indigo-100"
-                  leftIcon={<Save size={20} />}
+                  className="flex-1 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-100 text-xs sm:text-sm"
+                  leftIcon={<Save size={16} />}
                 >
-                  Guardar Cambios
+                  Guardar
                 </Button>
               </div>
             </div>

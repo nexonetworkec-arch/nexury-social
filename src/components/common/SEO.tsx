@@ -13,10 +13,10 @@ interface SEOProps {
 }
 
 export const SEO: React.FC<SEOProps> = ({ 
-  title = 'Nexury | Conecta con el mundo', 
-  description = 'Nexury es la plataforma donde las ideas fluyen y las comunidades crecen.',
-  keywords = 'red social, nexury, comunidad, compartir, noticias, tecnología',
-  image = 'https://api.dicebear.com/7.x/initials/png?seed=NX&backgroundColor=4f46e5&fontSize=50',
+  title = 'Nexury | Conecta con la elegancia de lo digital', 
+  description = 'La red social más exclusiva y profesional diseñada para creadores y visionarios. Únete a la élite digital.',
+  keywords = 'red social, nexury, comunidad, compartir, noticias, tecnología, lujo, profesional',
+  image = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop',
   url = window.location.origin,
   type = 'website',
   author = 'Nexury Team',
@@ -31,7 +31,7 @@ export const SEO: React.FC<SEOProps> = ({
     "@type": "Organization",
     "name": "Nexury",
     "url": window.location.origin,
-    "logo": "https://api.dicebear.com/7.x/initials/svg?seed=NX&backgroundColor=4f46e5&fontSize=50",
+    "logo": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&h=200&auto=format&fit=crop",
     "sameAs": [
       "https://twitter.com/nexury",
       "https://facebook.com/nexury"
@@ -46,7 +46,7 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="keywords" content={keywords} />
       <meta name="author" content={author} />
       <meta name="robots" content="index, follow" />
-      <meta name="theme-color" content="#4f46e5" />
+      <meta name="theme-color" content="#0f172a" />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (credentials: { email: string, password: string }) => Promise<void>;
-  register: (userData: { email: string, password: string }) => Promise<void>;
+  register: (userData: { email: string, password: string }) => Promise<{ needsConfirmation: boolean } | void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   signInWithSupabase: (email: string) => Promise<void>;

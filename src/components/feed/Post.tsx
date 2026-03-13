@@ -481,8 +481,9 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
           display_name: post.display_name, 
           username: post.username, 
           avatar_url: post.avatar_url, 
+          email: '', // Email not available in post object
           bio: '', 
-          is_admin: 0, 
+          is_admin: false, 
           created_at: '' 
         }}
       />

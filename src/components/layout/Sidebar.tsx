@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Home, Search, Bell, User, Bookmark, MoreHorizontal, Feather, LogOut, Calendar, Users, MessageSquare } from 'lucide-react';
+import { Home, Search, Bell, User, Bookmark, MoreHorizontal, Calendar, Users, MessageSquare } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
+import { Logo } from '../ui/Logo';
 
 const SidebarItem = ({ icon: Icon, label, active, onClick, badgeCount }: { icon: any, label: string, active?: boolean, onClick?: () => void, badgeCount?: number }) => (
   <div 
@@ -37,17 +38,16 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
     onViewChange(label);
   };
 
-  const handleLogout = () => {
-    logout();
-  };
-
   return (
     <>
       {/* Desktop Sidebar */}
       <nav className="hidden sm:flex flex-col h-screen sticky top-0 p-4 lg:p-6 gap-2 border-r border-slate-100 w-20 lg:w-72 bg-white overflow-y-auto no-scrollbar">
         <div className="p-3 mb-4 shrink-0">
-          <div className="w-12 h-12 brand-gradient rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200 rotate-3 hover:rotate-0 transition-transform duration-300 cursor-pointer mb-6" onClick={() => handleTabClick('Inicio')}>
-            <span className="text-white font-bold text-2xl font-display">N</span>
+          <div 
+            className="cursor-pointer mb-6" 
+            onClick={() => handleTabClick('Inicio')}
+          >
+            <Logo size="md" className="rotate-3 hover:rotate-0 transition-transform duration-300" />
           </div>
         </div>
         
@@ -93,17 +93,6 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
               <p className="text-slate-500 text-xs truncate">@{user?.username || "usuario"}</p>
             </div>
             <MoreHorizontal size={18} className="text-slate-400 hidden lg:block" />
-          </div>
-          
-          {/* Logout Tooltip/Menu */}
-          <div className="absolute bottom-full left-0 w-full mb-2 bg-white border border-slate-100 rounded-2xl shadow-xl opacity-0 invisible group-hover/user:opacity-100 group-hover/user:visible transition-all z-50 overflow-hidden">
-            <button 
-              onClick={handleLogout}
-              className="w-full text-left px-5 py-4 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-3"
-            >
-              <LogOut size={18} />
-              <span>Cerrar sesión @{user?.username}</span>
-            </button>
           </div>
         </div>
       </nav>

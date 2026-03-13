@@ -26,12 +26,14 @@ import { InstallPWA } from './components/ui/InstallPWA';
 import { AdCard } from './components/feed/AdCard';
 import { Post as PostType } from './types';
 import { supabase } from './lib/supabase';
-import { Feather, CheckCircle, Calendar, Settings, Shield, ShieldAlert, Search as SearchIcon } from 'lucide-react';
+import { Feather, CheckCircle, Calendar, Settings, Shield, ShieldAlert, Search as SearchIcon, LogOut } from 'lucide-react';
 import { SEO } from './components/common/SEO';
 import { dataService } from './services/dataService';
 import { Button } from './components/ui/Button';
 
 import { VerifiedBadge } from './components/ui/VerifiedBadge';
+
+import { Logo } from './components/ui/Logo';
 
 const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchChange: (query: string) => void }) => {
   const { user } = useAuth();
@@ -262,9 +264,7 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
       
       {error ? (
         <div className="flex flex-col items-center justify-center p-20 text-center gap-4">
-          <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center">
-            <Feather size={32} />
-          </div>
+          <Logo size="lg" withGlint={false} className="bg-rose-50/50 shadow-none" />
           <p className="text-slate-900 font-bold">Error al cargar el feed</p>
           <p className="text-slate-500 text-sm max-w-xs">{error}</p>
           <Button 
@@ -339,13 +339,24 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
   );
 };
 
+import { SplashScreen } from './components/ui/SplashScreen';
+
 const AppContent = () => {
-  const { user, loading, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
+  const [appLoading, setAppLoading] = useState(true);
   const [currentView, setCurrentView] = useState('Inicio');
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+
+  useEffect(() => {
+    // Show splash screen for at least 2 seconds
+    const timer = setTimeout(() => {
+      setAppLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -409,16 +420,8 @@ const AppContent = () => {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <SEO title="Cargando..." />
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium">Iniciando Nexury...</p>
-        </div>
-      </div>
-    );
+  if (appLoading || authLoading) {
+    return <SplashScreen />;
   }
 
   if (!user) {
@@ -513,9 +516,7 @@ const AppContent = () => {
       default:
         return (
           <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-6">
-              <Feather size={40} />
-            </div>
+            <Logo size="lg" animate={true} className="mb-6" />
             <h2 className="text-2xl font-bold text-slate-900 mb-2">{currentView}</h2>
             <p className="text-slate-500">Esta sección está en construcción. ¡Vuelve pronto!</p>
             <button 
@@ -532,6 +533,16 @@ const AppContent = () => {
   return (
     <div className="max-w-7xl mx-auto flex justify-center min-h-screen bg-[#fafafa] relative overflow-x-hidden">
       <SEO title={currentView} />
+      
+      {/* Global Logout Button - Top Right */}
+      <button 
+        onClick={() => logout()}
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all z-[60] bg-white/80 backdrop-blur-md border border-slate-100 shadow-sm"
+        title="Cerrar sesión"
+      >
+        <LogOut size={20} />
+      </button>
+
       <Sidebar currentView={currentView} onViewChange={navigateTo} />
       <main className="flex-1 flex justify-center w-full min-h-screen">
         {renderView()}

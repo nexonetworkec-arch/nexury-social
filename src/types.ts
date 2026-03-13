@@ -11,11 +11,12 @@ export interface User {
   id: string;
   username: string;
   display_name: string;
+  email: string;
   avatar_url: string;
   bio: string;
   is_admin: boolean;
   is_super_admin?: boolean;
-  is_verified?: boolean;
+  is_verified?: boolean | number;
   is_blocked?: boolean;
   created_at: string;
   followers_count?: number;
@@ -37,7 +38,7 @@ export interface Post {
   username: string;
   display_name: string;
   avatar_url: string;
-  is_verified?: boolean;
+  is_verified?: boolean | number;
   show_appointment_button?: boolean;
 }
 
@@ -50,7 +51,7 @@ export interface Comment {
   username: string;
   display_name: string;
   avatar_url: string;
-  is_verified?: boolean;
+  is_verified?: boolean | number;
 }
 
 export interface Appointment {
@@ -65,11 +66,11 @@ export interface Appointment {
   requester_username?: string;
   requester_display_name?: string;
   requester_avatar?: string;
-  requester_is_verified?: boolean;
+  requester_is_verified?: boolean | number;
   receiver_username?: string;
   receiver_display_name?: string;
   receiver_avatar?: string;
-  receiver_is_verified?: boolean;
+  receiver_is_verified?: boolean | number;
 }
 
 export interface Notification {
@@ -83,7 +84,7 @@ export interface Notification {
   from_username?: string;
   from_display_name?: string;
   from_avatar?: string;
-  from_is_verified?: boolean;
+  from_is_verified?: boolean | number;
 }
 
 export interface Conversation {

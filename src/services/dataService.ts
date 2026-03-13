@@ -740,6 +740,28 @@ export const dataService = {
     return data;
   },
 
+  async requestVerification(userId: string) {
+    // En una app real, esto crearía una entrada en una tabla de solicitudes.
+    // Por ahora, enviamos una notificación a los administradores.
+    try {
+      const admins = await this.getAdministrators();
+      
+      for (const admin of admins) {
+        await this.createNotification({
+          user_id: admin.id,
+          from_user_id: userId,
+          type: 'system',
+          content: `Un usuario ha solicitado la verificación de su perfil.`
+        });
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error in requestVerification:', error);
+      throw error;
+    }
+  },
+
   async blockUser(userId: string, isBlocked: boolean) {
     // No permitir bloquear a un Super Admin
     const { data, error } = await supabase
@@ -768,6 +790,48 @@ export const dataService = {
     if (profileError) throw profileError;
 
     return { success: true };
+  },
+
+  async reportUser(targetId: string, reporterId: string, reason: string) {
+    try {
+      const { data, error } = await supabase
+        .from('user_reports')
+        .insert([{ 
+          target_id: targetId, 
+          reporter_id: reporterId, 
+          reason,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error reporting user:', error);
+      throw error;
+    }
+  },
+
+  async blockUserPersonal(blockerId: string, blockedId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('user_blocks')
+        .insert([{ 
+          blocker_id: blockerId, 
+          blocked_id: blockedId,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error blocking user personally:', error);
+      throw error;
+    }
   },
 
   async getAdminPosts() {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
+import { Logo } from './Logo';
 
 export const InstallPWA: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -61,9 +62,7 @@ export const InstallPWA: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
-                  NX
-                </div>
+                <Logo size="sm" withGlint={false} />
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Instalar Nexury</h3>
                   <p className="text-xs text-slate-500">Añádela a tu pantalla de inicio</p>
