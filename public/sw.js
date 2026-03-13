@@ -1,6 +1,26 @@
-// Service Worker para Notificaciones Push - Nexury
+// Service Worker Maestro - Nexury (Notificaciones + Caché)
 /* eslint-disable no-restricted-globals */
 
+const CACHE_NAME = 'nexury-v1';
+
+// 1. Lógica de Instalación y Caché (Carga rápida)
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
+  );
+});
+
+// 2. Lógica de Notificaciones Push (Tu código)
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
@@ -8,7 +28,7 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     const options = {
       body: data.body || 'Tienes una nueva notificación en Nexury',
-      icon: '/logo192.png', // Asegúrate de que este icono exista o usa uno por defecto
+      icon: '/logo192.png', 
       badge: '/logo192.png',
       data: {
         url: data.url || '/'
@@ -24,8 +44,6 @@ self.addEventListener('push', (event) => {
     );
   } catch (error) {
     console.error('Error al procesar notificación push:', error);
-    
-    // Fallback para datos que no son JSON
     const text = event.data.text();
     event.waitUntil(
       self.registration.showNotification('Nexury', {
@@ -36,23 +54,21 @@ self.addEventListener('push', (event) => {
   }
 });
 
+// 3. Lógica al hacer clic en la notificación
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
   if (event.action === 'close') return;
 
   const urlToOpen = event.notification.data.url || '/';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Si ya hay una ventana abierta, enfocarla y navegar
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
         if (client.url === urlToOpen && 'focus' in client) {
           return client.focus();
         }
       }
-      // Si no hay ventana abierta, abrir una nueva
       if (self.clients.openWindow) {
         return self.clients.openWindow(urlToOpen);
       }
