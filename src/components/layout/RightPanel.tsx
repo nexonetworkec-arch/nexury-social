@@ -17,7 +17,40 @@ const TrendItem = ({ category, title, posts, onClick }: { category: string, titl
   </div>
 );
 
-export const RightPanel = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchChange: (query: string) => void }) => {
+export const RightPanel = ({ 
+  searchQuery, 
+  onSearchChange,
+  onTrendClick
+}: { 
+  searchQuery: string, 
+  onSearchChange: (query: string) => void,
+  onTrendClick?: (query: string) => void
+}) => {
+  const [trends, setTrends] = React.useState<{ category: string, title: string, posts: string }[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchTrends = async () => {
+      try {
+        const data = await dataService.getTrends();
+        setTrends(data);
+      } catch (err) {
+        console.error('Error loading trends:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrends();
+  }, []);
+
+  const handleTrendClick = (title: string) => {
+    if (onTrendClick) {
+      onTrendClick(title);
+    } else {
+      onSearchChange(title);
+    }
+  };
+
   return (
     <div className="hidden xl:flex flex-col h-screen sticky top-0 p-6 gap-6 w-[380px] bg-white border-l border-slate-100 overflow-y-auto no-scrollbar">
       <div className="relative group shrink-0">
@@ -31,19 +64,39 @@ export const RightPanel = ({ searchQuery, onSearchChange }: { searchQuery: strin
         />
       </div>
 
-      <div className="bg-slate-50 rounded-[2rem] overflow-hidden border border-slate-100">
-        <h2 className="p-5 text-xl font-bold font-display text-slate-900">Tendencias</h2>
-        <TrendItem category="Tecnología" title="AI Studio" posts="125k" onClick={() => onSearchChange('AI Studio')} />
-        <TrendItem category="Deportes" title="Champions League" posts="84k" onClick={() => onSearchChange('Champions League')} />
-        <TrendItem category="Entretenimiento" title="Nuevo Estreno" posts="42k" onClick={() => onSearchChange('Nuevo Estreno')} />
-        <TrendItem category="Negocios" title="Mercado Bursátil" posts="12k" onClick={() => onSearchChange('Mercado Bursátil')} />
-        <Button 
-          variant="ghost" 
-          className="p-5 text-indigo-600 font-semibold text-sm hover:bg-indigo-50 w-full justify-start rounded-none"
-          onClick={() => alert('Cargando más tendencias...')}
-        >
-          Mostrar más
-        </Button>
+      <div className="bg-slate-50 rounded-[2rem] overflow-hidden border border-slate-100 flex flex-col max-h-[450px]">
+        <h2 className="p-5 text-xl font-bold font-display text-slate-900 shrink-0">Tendencias</h2>
+        <div className="overflow-y-auto custom-scrollbar flex-1">
+          {loading ? (
+            <div className="p-10 flex justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            </div>
+          ) : trends.length > 0 ? (
+            trends.map((trend, index) => (
+              <TrendItem 
+                key={index}
+                category={trend.category}
+                title={trend.title}
+                posts={trend.posts}
+                onClick={() => handleTrendClick(trend.title)}
+              />
+            ))
+          ) : (
+            <div className="p-8 text-center">
+              <p className="text-sm text-slate-500 font-medium">El mundo está tranquilo...</p>
+              <p className="text-xs text-slate-400 mt-1">¡Sé el primero en crear una tendencia usando #hashtags!</p>
+            </div>
+          )}
+        </div>
+        {trends.length > 5 && (
+          <Button 
+            variant="ghost" 
+            className="p-4 text-indigo-600 font-semibold text-sm hover:bg-indigo-50 w-full justify-start rounded-none shrink-0 border-t border-slate-100"
+            onClick={() => alert('Explora más en la sección de búsqueda')}
+          >
+            Mostrar más
+          </Button>
+        )}
       </div>
 
       <div className="bg-slate-50 rounded-[2rem] overflow-hidden border border-slate-100 flex flex-col">

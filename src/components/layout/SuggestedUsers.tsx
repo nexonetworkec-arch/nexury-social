@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { UserStatus } from '../ui/UserStatus';
 import { Calendar, MessageSquare } from 'lucide-react';
+import { LiveIndicator } from '../live/LiveIndicator';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
@@ -15,9 +16,10 @@ interface FollowItemProps {
   username: string;
   avatarUrl?: string;
   isVerified?: boolean;
+  isLive?: boolean;
 }
 
-const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, isVerified }) => {
+const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, isVerified, isLive }) => {
   const { user, refreshUser } = useAuth();
   const [following, setFollowing] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
@@ -85,7 +87,9 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
     >
       <div className="flex items-center gap-3">
         <div className="relative">
-          <img src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} className="w-10 h-10 rounded-full object-cover" alt="Usuario" />
+          <LiveIndicator isLive={isLive} size="sm">
+            <img src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} className="w-10 h-10 rounded-full object-cover" alt="Usuario" />
+          </LiveIndicator>
           <div className="absolute -bottom-0.5 -right-0.5">
             <UserStatus userId={id} size="sm" />
           </div>
@@ -221,6 +225,7 @@ export const SuggestedUsers = () => {
               username={u.username} 
               avatarUrl={u.avatar_url}
               isVerified={u.is_verified} 
+              isLive={u.is_live}
             />
           ))
         )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, Heart, Share2, BarChart2, MoreHorizontal, Send, Calendar, Edit2, Trash2, AlertCircle, MessageSquare, Bookmark } from 'lucide-react';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
+import { LiveIndicator } from '../live/LiveIndicator';
 import { UserStatus } from '../ui/UserStatus';
 import { Post as PostType, Comment as CommentType } from '../../types';
 import { formatTime, cn } from '../../lib/utils';
@@ -273,7 +274,9 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
     >
       <div className="p-4 sm:p-6 flex gap-3 sm:gap-4">
         <div className="relative h-fit cursor-pointer" onClick={handleProfileClick}>
-          <img src={post.avatar_url} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-sm group-hover/post:shadow-md transition-shadow" alt={post.username} />
+          <LiveIndicator isLive={(post as any).is_live}>
+            <img src={post.avatar_url} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-sm group-hover/post:shadow-md transition-shadow" alt={post.username} />
+          </LiveIndicator>
           <div className="absolute -bottom-1 -right-1">
             <UserStatus userId={post.user_id} size="sm" />
           </div>

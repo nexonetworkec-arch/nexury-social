@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, Bell, User, Bookmark, MoreHorizontal, Calendar, Users, MessageSquare } from 'lucide-react';
+import { Home, Search, Bell, User, Bookmark, MoreHorizontal, Calendar, Users, MessageSquare, Video } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
@@ -53,6 +53,7 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
         
         <div className="space-y-1 shrink-0">
           <SidebarItem icon={Home} label="Inicio" active={currentView === 'Inicio'} onClick={() => handleTabClick('Inicio')} />
+          <SidebarItem icon={Video} label="Live" active={currentView === 'Live'} onClick={() => handleTabClick('Live')} />
           <SidebarItem icon={Users} label="Nexuarios" active={currentView === 'Nexuarios'} onClick={() => handleTabClick('Nexuarios')} />
           <SidebarItem icon={Search} label="Explorar" active={currentView === 'Explorar'} onClick={() => handleTabClick('Explorar')} />
           <SidebarItem 
@@ -101,6 +102,7 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-2xl border-t border-slate-100 flex items-center z-50 pb-safe px-2">
         <div className="flex w-full justify-between items-center overflow-x-auto no-scrollbar py-2">
           <div onClick={() => handleTabClick('Inicio')} className={cn("p-3 rounded-2xl transition-all flex-shrink-0", currentView === 'Inicio' ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-slate-400")}><Home size={24} /></div>
+          <div onClick={() => handleTabClick('Live')} className={cn("p-3 rounded-2xl transition-all flex-shrink-0", currentView === 'Live' ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-slate-400")}><Video size={24} /></div>
           <div onClick={() => handleTabClick('Nexuarios')} className={cn("p-3 rounded-2xl transition-all flex-shrink-0", currentView === 'Nexuarios' ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-slate-400")}><Users size={24} /></div>
           <div onClick={() => handleTabClick('Explorar')} className={cn("p-3 rounded-2xl transition-all flex-shrink-0", currentView === 'Explorar' ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-slate-400")}><Search size={24} /></div>
           <div onClick={() => handleTabClick('Notificaciones')} className={cn("p-3 rounded-2xl transition-all flex-shrink-0 relative", currentView === 'Notificaciones' ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-slate-400")}>

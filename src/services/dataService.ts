@@ -11,138 +11,160 @@ export const dataService = {
       return this.getSmartPosts(currentUserId);
     }
 
-    const { data, error } = await supabase
-      .from('posts')
-      .select(`
-        *,
-        profiles:user_id (
-          username,
-          display_name,
-          avatar_url,
-          is_verified,
-          is_super_admin
-        )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            display_name,
+            avatar_url,
+            is_verified,
+            is_super_admin,
+            is_live
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const posts = (data || []).map((post: any) => ({
-      ...post,
-      username: post.profiles?.username,
-      display_name: post.profiles?.display_name,
-      avatar_url: post.profiles?.avatar_url,
-      is_verified: !!post.profiles?.is_verified
-    }));
-
-    return this.enrichPostsWithLikes(posts, currentUserId);
-  },
-
-  async getUserPosts(userId: string, currentUserId?: string): Promise<Post[]> {
-    const { data, error } = await supabase
-      .from('posts')
-      .select(`
-        *,
-        profiles:user_id (
-          username,
-          display_name,
-          avatar_url,
-          is_verified,
-          is_super_admin
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (error) throw error;
-
-    const posts = (data || []).map((post: any) => ({
-      ...post,
-      username: post.profiles?.username,
-      display_name: post.profiles?.display_name,
-      avatar_url: post.profiles?.avatar_url,
-      is_verified: !!post.profiles?.is_verified
-    }));
-
-    return this.enrichPostsWithLikes(posts, currentUserId);
-  },
-
-  async getSmartPosts(currentUserId?: string): Promise<Post[]> {
-    // Obtener configuración global para los multiplicadores
-    const settings = await this.getGlobalSettings();
-    const isSmartEnabled = settings.smart_feed_enabled ?? true;
-    const verifiedBoostMultiplier = settings.verified_boost ?? 1.5;
-    const adminBoostMultiplier = settings.admin_boost ?? 3.0;
-
-    if (!isSmartEnabled) {
-      return this.getPosts(currentUserId, 'recent');
-    }
-
-    // Para una implementación real de alto rendimiento, esto debería ser un RPC en SQL.
-    // Aquí lo implementamos en JS para demostrar el algoritmo.
-    const { data, error } = await supabase
-      .from('posts')
-      .select(`
-        *,
-        profiles:user_id (
-          username,
-          display_name,
-          avatar_url,
-          is_verified,
-          is_super_admin
-        )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(100); // Traemos más para poder rankear
-
-    if (error) throw error;
-
-    const now = new Date();
-    const posts = (data || []).map((post: any) => {
-      const createdAt = new Date(post.created_at);
-      const hoursOld = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-      
-      // Algoritmo inspirado en X (Twitter)
-      // Score base por interacción
-      const interactionScore = 
-        (post.likes_count * 50) + 
-        (post.comments_count * 30) + 
-        (post.views_count * 2);
-      
-      // Bonus por multimedia
-      const mediaBonus = post.image_url ? 1.2 : 1.0;
-      
-      // Bonus por verificado
-      const verifiedBonus = post.profiles?.is_verified ? verifiedBoostMultiplier : 1.0;
-
-      // Super Admin visibility boost (Prioridad máxima)
-      const superAdminBonus = post.profiles?.is_super_admin ? adminBoostMultiplier : 1.0;
-      
-      // Decaimiento temporal (Gravity)
-      // A mayor tiempo, el score baja exponencialmente
-      const gravity = 1.8;
-      const timeDecay = Math.pow(hoursOld + 2, gravity);
-      
-      const finalScore = (interactionScore * mediaBonus * verifiedBonus * superAdminBonus) / timeDecay;
-
-      return {
+      const posts = (data || []).map((post: any) => ({
         ...post,
         username: post.profiles?.username,
         display_name: post.profiles?.display_name,
         avatar_url: post.profiles?.avatar_url,
-        is_verified: !!post.profiles?.is_verified,
-        _score: finalScore
-      };
-    });
+        is_verified: !!post.profiles?.is_verified
+      }));
 
-    // Ordenar por score y tomar los mejores 50
-    const sortedPosts = posts
-      .sort((a, b) => b._score - a._score)
-      .slice(0, 50);
+      return this.enrichPostsWithLikes(posts, currentUserId);
+    } catch (err: any) {
+      console.error('Error in getPosts:', err);
+      // Fallback simple query if join fails (e.g. missing columns)
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return this.enrichPostsWithLikes(data || [], currentUserId);
+    }
+  },
 
-    return this.enrichPostsWithLikes(sortedPosts, currentUserId);
+  async getUserPosts(userId: string, currentUserId?: string): Promise<Post[]> {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            display_name,
+            avatar_url,
+            is_verified,
+            is_super_admin,
+            is_live
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      const posts = (data || []).map((post: any) => ({
+        ...post,
+        username: post.profiles?.username,
+        display_name: post.profiles?.display_name,
+        avatar_url: post.profiles?.avatar_url,
+        is_verified: !!post.profiles?.is_verified
+      }));
+
+      return this.enrichPostsWithLikes(posts, currentUserId);
+    } catch (err) {
+      console.error('Error in getUserPosts:', err);
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return this.enrichPostsWithLikes(data || [], currentUserId);
+    }
+  },
+
+  async getSmartPosts(currentUserId?: string): Promise<Post[]> {
+    try {
+      // Obtener configuración global para los multiplicadores
+      const settings = await this.getGlobalSettings();
+      const isSmartEnabled = settings.smart_feed_enabled ?? true;
+      const verifiedBoostMultiplier = settings.verified_boost ?? 1.5;
+      const adminBoostMultiplier = settings.admin_boost ?? 3.0;
+
+      if (!isSmartEnabled) {
+        return this.getPosts(currentUserId, 'recent');
+      }
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            display_name,
+            avatar_url,
+            is_verified,
+            is_super_admin,
+            is_live
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      const now = new Date();
+      const posts = (data || []).map((post: any) => {
+        const createdAt = new Date(post.created_at);
+        const hoursOld = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+        
+        const interactionScore = 
+          (post.likes_count * 50) + 
+          (post.comments_count * 30) + 
+          (post.views_count * 2);
+        
+        const mediaBonus = post.image_url ? 1.2 : 1.0;
+        const verifiedBonus = post.profiles?.is_verified ? verifiedBoostMultiplier : 1.0;
+        const superAdminBonus = post.profiles?.is_super_admin ? adminBoostMultiplier : 1.0;
+        
+        const gravity = 1.8;
+        const timeDecay = Math.pow(hoursOld + 2, gravity);
+        
+        const finalScore = (interactionScore * mediaBonus * verifiedBonus * superAdminBonus) / timeDecay;
+
+        return {
+          ...post,
+          username: post.profiles?.username,
+          display_name: post.profiles?.display_name,
+          avatar_url: post.profiles?.avatar_url,
+          is_verified: !!post.profiles?.is_verified,
+          _score: finalScore
+        };
+      });
+
+      const sortedPosts = posts
+        .sort((a, b) => b._score - a._score)
+        .slice(0, 50);
+
+      return this.enrichPostsWithLikes(sortedPosts, currentUserId);
+    } catch (err) {
+      console.error('Error in getSmartPosts:', err);
+      return this.getPosts(currentUserId, 'recent');
+    }
   },
 
   async enrichPostsWithLikes(posts: Post[], currentUserId?: string): Promise<Post[]> {
@@ -542,6 +564,119 @@ export const dataService = {
     return count || 0;
   },
 
+  async getTrends(): Promise<{ category: string, title: string, posts: string }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('content')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+
+      const hashtags: { [key: string]: number } = {};
+      data.forEach(post => {
+        const matches = post.content?.match(/#\w+/g);
+        if (matches) {
+          matches.forEach(tag => {
+            hashtags[tag] = (hashtags[tag] || 0) + 1;
+          });
+        }
+      });
+
+      const dynamicTrends = Object.entries(hashtags)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([tag, count]) => ({
+          category: "Tendencia",
+          title: tag,
+          posts: count > 1000 ? `${(count / 1000).toFixed(1)}k` : `${count}`
+        }));
+
+      return dynamicTrends;
+    } catch (err) {
+      console.error('Error fetching trends:', err);
+      return [];
+    }
+  },
+
+  // LIVE STREAMS
+  async getActiveLiveStreams(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .select(`
+        *,
+        profiles:user_id (
+          username,
+          display_name,
+          avatar_url,
+          is_verified
+        )
+      `)
+      .eq('is_active', true)
+      .order('started_at', { ascending: false });
+
+    if (error) {
+      console.warn('live_streams table might be missing:', error);
+      return [];
+    }
+
+    return (data || []).map((stream: any) => ({
+      ...stream,
+      username: stream.profiles?.username,
+      display_name: stream.profiles?.display_name,
+      avatar_url: stream.profiles?.avatar_url,
+      is_verified: !!stream.profiles?.is_verified
+    }));
+  },
+
+  async startLiveStream(userId: string, title: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .insert([{ 
+        user_id: userId, 
+        title, 
+        is_active: true, 
+        viewer_count: 0,
+        started_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Actualizar perfil para indicar que está en vivo
+    await supabase
+      .from('profiles')
+      .update({ is_live: true })
+      .eq('id', userId);
+
+    return data;
+  },
+
+  async endLiveStream(streamId: string, userId: string) {
+    const { error } = await supabase
+      .from('live_streams')
+      .update({ is_active: false, ended_at: new Date().toISOString() })
+      .eq('id', streamId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    // Actualizar perfil
+    await supabase
+      .from('profiles')
+      .update({ is_live: false })
+      .eq('id', userId);
+  },
+
+  async updateLiveViewers(streamId: string, count: number) {
+    await supabase
+      .from('live_streams')
+      .update({ viewer_count: count })
+      .eq('id', streamId);
+  },
+
   async recordUniqueView(viewerId: string, targetId: string, targetType: 'post' | 'profile'): Promise<boolean> {
     try {
       const { data, error } = await supabase.rpc('record_unique_view', {
@@ -870,7 +1005,7 @@ export const dataService = {
   async getSuggestedUsers(currentUserId?: string): Promise<any[]> {
     let query = supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, is_verified, bio, created_at')
+      .select('id, username, display_name, avatar_url, is_verified, is_live, bio, created_at')
       .order('created_at', { ascending: false }); // Mostrar los más recientes primero, pero sin límite
 
     if (currentUserId) {
@@ -892,7 +1027,7 @@ export const dataService = {
   async getNexuarios(currentUserId?: string): Promise<any[]> {
     let query = supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, is_verified, bio, created_at')
+      .select('id, username, display_name, avatar_url, is_verified, is_live, bio, created_at')
       .order('created_at', { ascending: false });
 
     const { data, error } = await query;

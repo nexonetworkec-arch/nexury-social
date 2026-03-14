@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   is_verified BOOLEAN DEFAULT FALSE,
   is_blocked BOOLEAN DEFAULT FALSE,
   is_online BOOLEAN DEFAULT FALSE,
+  is_live BOOLEAN DEFAULT FALSE,
   last_seen TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   followers_count INTEGER DEFAULT 0,
   following_count INTEGER DEFAULT 0,
@@ -52,6 +53,16 @@ CREATE TABLE IF NOT EXISTS public.posts (
   views_count INTEGER DEFAULT 0,
   show_appointment_button BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.live_streams (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  viewer_count INTEGER DEFAULT 0,
+  started_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  ended_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS public.comments (
@@ -211,7 +222,9 @@ SELECT
     pr.username, 
     pr.display_name, 
     pr.avatar_url, 
-    pr.is_verified
+    pr.is_verified,
+    pr.is_super_admin,
+    pr.is_live
 FROM public.posts p
 JOIN public.profiles pr ON p.user_id = pr.id;
 
@@ -365,6 +378,7 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.live_streams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verified_benefits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verified_benefits_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.post_views ENABLE ROW LEVEL SECURITY;
@@ -421,6 +435,10 @@ CREATE POLICY "Active ads are viewable by everyone" ON public.ads FOR SELECT USI
 CREATE POLICY "Admins can manage ads" ON public.ads FOR ALL USING (public.is_admin());
 CREATE POLICY "Users can update ad metrics" ON public.ads FOR UPDATE USING (true) WITH CHECK (true);
 
+-- Live Streams
+CREATE POLICY "Live streams are viewable by everyone" ON public.live_streams FOR SELECT USING (true);
+CREATE POLICY "Users can manage own live streams" ON public.live_streams FOR ALL USING (auth.uid() = user_id);
+
 -- Verified Benefits
 CREATE POLICY "Active benefits are viewable by everyone" ON public.verified_benefits FOR SELECT USING (is_active = true);
 CREATE POLICY "Admins can manage benefits" ON public.verified_benefits FOR ALL USING (public.is_admin());
@@ -471,6 +489,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.live_streams;
 
 -- ===============================================================
 -- 11. RPC FUNCTIONS

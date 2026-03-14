@@ -126,3 +126,16 @@ export interface Ad {
   clicks: number;
   created_at: string;
 }
+
+export interface LiveStream {
+  id: string;
+  user_id: string;
+  title: string;
+  viewer_count: number;
+  is_active: boolean;
+  started_at: string;
+  username: string;
+  display_name: string;
+  avatar_url: string;
+  is_verified?: boolean | number;
+}

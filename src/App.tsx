@@ -19,6 +19,7 @@ import { ProfileView } from './components/profile/ProfileView';
 import { NexuariosList } from './components/nexuarios/NexuariosList';
 import { NotificationsList } from './components/notifications/NotificationsList';
 import { BookmarksList } from './components/bookmarks/BookmarksList';
+import { LiveView } from './components/live/LiveView';
 import { SuggestedUsers } from './components/layout/SuggestedUsers';
 import { ChatFloatingSystem } from './components/chat/ChatFloatingSystem';
 import { CreatePostModal } from './components/feed/CreatePostModal';
@@ -91,11 +92,32 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
     const channel = supabase
       .channel('public:posts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, async (payload) => {
-        const { data: newPost } = await supabase
-          .from('posts_with_profiles')
-          .select('*')
-          .eq('id', payload.new.id)
-          .single();
+        let newPost;
+        try {
+          const { data } = await supabase
+            .from('posts_with_profiles')
+            .select('*')
+            .eq('id', payload.new.id)
+            .single();
+          newPost = data;
+        } catch (err) {
+          console.warn('posts_with_profiles view failed, falling back to manual join:', err);
+          const { data } = await supabase
+            .from('posts')
+            .select('*, profiles:user_id(*)')
+            .eq('id', payload.new.id)
+            .single();
+          
+          if (data) {
+            newPost = {
+              ...data,
+              username: data.profiles?.username,
+              display_name: data.profiles?.display_name,
+              avatar_url: data.profiles?.avatar_url,
+              is_verified: data.profiles?.is_verified
+            };
+          }
+        }
         
         if (newPost) {
           let userHasLiked = false;
@@ -117,11 +139,32 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, async (payload) => {
-        const { data: updatedPost } = await supabase
-          .from('posts_with_profiles')
-          .select('*')
-          .eq('id', payload.new.id)
-          .single();
+        let updatedPost;
+        try {
+          const { data } = await supabase
+            .from('posts_with_profiles')
+            .select('*')
+            .eq('id', payload.new.id)
+            .single();
+          updatedPost = data;
+        } catch (err) {
+          console.warn('posts_with_profiles view failed on update, falling back:', err);
+          const { data } = await supabase
+            .from('posts')
+            .select('*, profiles:user_id(*)')
+            .eq('id', payload.new.id)
+            .single();
+          
+          if (data) {
+            updatedPost = {
+              ...data,
+              username: data.profiles?.username,
+              display_name: data.profiles?.display_name,
+              avatar_url: data.profiles?.avatar_url,
+              is_verified: data.profiles?.is_verified
+            };
+          }
+        }
 
         if (updatedPost) {
           setPosts((prev) => prev.map(p => {
@@ -505,6 +548,10 @@ const AppContent = () => {
         return (
           <BookmarksList />
         );
+      case 'Live':
+        return (
+          <LiveView />
+        );
       case 'Citas':
         return (
           <AppointmentsList />
@@ -547,7 +594,14 @@ const AppContent = () => {
       <main className="flex-1 flex justify-center w-full min-h-screen">
         {renderView()}
       </main>
-      <RightPanel searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <RightPanel 
+        searchQuery={searchQuery} 
+        onSearchChange={setSearchQuery} 
+        onTrendClick={(query) => {
+          setSearchQuery(query);
+          navigateTo('Explorar');
+        }}
+      />
       <EditProfileModal isOpen={isEditProfileOpen} onClose={() => setIsEditProfileOpen(false)} />
       <CreatePostModal isOpen={isCreatePostOpen} onClose={() => setIsCreatePostOpen(false)} />
       <ChatFloatingSystem />
