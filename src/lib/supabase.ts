@@ -72,11 +72,25 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
         },
         global: {
           headers: { 'x-application-name': 'nexury' },
-          fetch: (url, options) => {
-            return fetch(url, options).catch(err => {
-              console.error('Supabase Fetch Error:', err);
-              throw err;
-            });
+          fetch: async (url, options) => {
+            const maxRetries = 3;
+            let lastError;
+            
+            for (let i = 0; i < maxRetries; i++) {
+              try {
+                const response = await fetch(url, options);
+                return response;
+              } catch (err) {
+                lastError = err;
+                console.warn(`Supabase Fetch Attempt ${i + 1} failed:`, err);
+                if (i < maxRetries - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                }
+              }
+            }
+            
+            console.error('Supabase Fetch Error after retries:', lastError);
+            throw lastError;
           }
         }
       });

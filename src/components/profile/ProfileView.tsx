@@ -31,6 +31,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isRequestingVerification, setIsRequestingVerification] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [stats, setStats] = useState({ followers: 0, following: 0, total_likes: 0 });
   const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'denied'
@@ -222,19 +223,35 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   }, [targetId, currentUser?.id]);
 
   const handleFollow = async () => {
-    if (!currentUser || !targetId || isOwnProfile) return;
+    if (!currentUser || !targetId || isOwnProfile || isFollowLoading) return;
+    
     const newFollowingState = !following;
     setFollowing(newFollowingState);
+    setIsFollowLoading(true);
+    
+    // Optimistic update with safety
+    setStats(prev => ({
+      ...prev,
+      followers: newFollowingState 
+        ? prev.followers + 1 
+        : Math.max(0, prev.followers - 1)
+    }));
+
     try {
-      await dataService.followUser(currentUser.id, targetId);
-      setStats(prev => ({
-        ...prev,
-        followers: newFollowingState ? prev.followers + 1 : prev.followers - 1
-      }));
+      await dataService.followUser(currentUser.id, targetId, following);
       await refreshUser();
     } catch (error) {
       console.error('Error following user', error);
+      // Rollback on error
       setFollowing(!newFollowingState);
+      setStats(prev => ({
+        ...prev,
+        followers: !newFollowingState 
+          ? prev.followers + 1 
+          : Math.max(0, prev.followers - 1)
+      }));
+    } finally {
+      setIsFollowLoading(false);
     }
   };
 

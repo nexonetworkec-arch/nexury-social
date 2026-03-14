@@ -231,49 +231,51 @@ export const dataService = {
     return { success: true };
   },
 
-  async likePost(postId: string, userId: string) {
+  async likePost(postId: string, userId: string, hasLiked: boolean = false) {
     try {
-      // Intentar insertar en la tabla de likes
-      const { error } = await supabase
-        .from('likes')
-        .insert([{ user_id: userId, post_id: postId }]);
-
-      if (error) {
-        // Si ya existe (error de unicidad 23505), quitamos el like (Toggle)
-        if (error.code === '23505') {
-          const { error: deleteError } = await supabase
-            .from('likes')
-            .delete()
-            .eq('user_id', userId)
-            .eq('post_id', postId);
-          
-          if (deleteError) throw deleteError;
-          return { success: true, action: 'unliked' };
-        }
-        throw error;
-      }
-
-      // Crear notificación para el autor del post
-      try {
-        const { data: post } = await supabase
-          .from('posts')
-          .select('user_id')
-          .eq('id', postId)
-          .single();
+      if (hasLiked) {
+        // Quitar like
+        const { error: deleteError } = await supabase
+          .from('likes')
+          .delete()
+          .eq('user_id', userId)
+          .eq('post_id', postId);
         
-        if (post && post.user_id !== userId) {
-          await this.createNotification({
-            user_id: post.user_id,
-            from_user_id: userId,
-            type: 'like',
-            post_id: postId
-          });
-        }
-      } catch (nErr) {
-        console.error('Error creating like notification:', nErr);
-      }
+        if (deleteError) throw deleteError;
+        return { success: true, action: 'unliked' };
+      } else {
+        // Dar like
+        const { error } = await supabase
+          .from('likes')
+          .insert([{ user_id: userId, post_id: postId }]);
 
-      return { success: true, action: 'liked' };
+        if (error) {
+          if (error.code === '23505') return { success: true, action: 'already_liked' };
+          throw error;
+        }
+
+        // Crear notificación para el autor del post
+        try {
+          const { data: post } = await supabase
+            .from('posts')
+            .select('user_id')
+            .eq('id', postId)
+            .single();
+          
+          if (post && post.user_id !== userId) {
+            await this.createNotification({
+              user_id: post.user_id,
+              from_user_id: userId,
+              type: 'like',
+              post_id: postId
+            });
+          }
+        } catch (nErr) {
+          console.error('Error creating like notification:', nErr);
+        }
+
+        return { success: true, action: 'liked' };
+      }
     } catch (error) {
       console.error('Error in likePost service:', error);
       throw error;
@@ -600,36 +602,46 @@ export const dataService = {
     }
   },
 
-  async followUser(followerId: string, followingId: string) {
-    const { error } = await supabase
-      .from('follows')
-      .insert([{ follower_id: followerId, following_id: followingId }]);
-
-    if (error) {
-      if (error.code === '23505') {
-        const { error: deleteError } = await supabase
+  async followUser(followerId: string, followingId: string, isFollowing: boolean = false) {
+    try {
+      if (isFollowing) {
+        // Dejar de seguir
+        const { error } = await supabase
           .from('follows')
           .delete()
           .eq('follower_id', followerId)
           .eq('following_id', followingId);
-        if (deleteError) throw deleteError;
+        
+        if (error) throw error;
         return { success: true, unfollowed: true };
+      } else {
+        // Seguir
+        const { error } = await supabase
+          .from('follows')
+          .insert([{ follower_id: followerId, following_id: followingId }]);
+
+        if (error) {
+          if (error.code === '23505') return { success: true, alreadyFollowing: true };
+          throw error;
+        }
+
+        // Crear notificación para el usuario seguido
+        try {
+          await this.createNotification({
+            user_id: followingId,
+            from_user_id: followerId,
+            type: 'follow'
+          });
+        } catch (nErr) {
+          console.error('Error creating follow notification:', nErr);
+        }
+
+        return { success: true };
       }
+    } catch (error) {
+      console.error('Error in followUser service:', error);
       throw error;
     }
-
-    // Crear notificación para el usuario seguido
-    try {
-      await this.createNotification({
-        user_id: followingId,
-        from_user_id: followerId,
-        type: 'follow'
-      });
-    } catch (nErr) {
-      console.error('Error creating follow notification:', nErr);
-    }
-
-    return { success: true };
   },
 
   // ADMIN

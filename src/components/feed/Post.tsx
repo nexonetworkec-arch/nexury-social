@@ -183,7 +183,7 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
     setLikesCount(prev => liked ? prev - 1 : prev + 1);
     
     try {
-      const result = await dataService.likePost(post.id, user.id);
+      const result = await dataService.likePost(post.id, user.id, liked);
       // Sincronizar con la respuesta real si es necesario
       if (result.action === 'unliked') {
         setLiked(false);
