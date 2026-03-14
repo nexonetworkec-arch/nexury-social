@@ -6,6 +6,7 @@ import { Send, Phone, Video, Info, ArrowLeft, Smile, Paperclip } from 'lucide-re
 import { formatTime, cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
+import { useNotifications } from '../../context/NotificationContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ChatWindowProps {
@@ -15,6 +16,7 @@ interface ChatWindowProps {
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, currentUser, onBack }) => {
+  const { refreshCounts } = useNotifications();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, currentUse
         
         // Mark as read
         await dataService.markMessagesAsRead(conversation.id, currentUser.id);
+        refreshCounts();
       } catch (error) {
         console.error('Error fetching messages', error);
       } finally {
@@ -67,6 +70,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversation, currentUse
           // Mark as read if it's from the other user
           if (newMsg.sender_id !== currentUser.id) {
             await dataService.markMessagesAsRead(conversation.id, currentUser.id);
+            refreshCounts();
           }
         }
       )

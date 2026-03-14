@@ -52,7 +52,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           avatar_url: otherUser?.avatar_url || '',
           last_message: conv.last_message,
           last_message_time: conv.last_message_at,
-          unread_count: 0, // Logic for unread would go here
+          unread_count: conv.unread_count || 0,
           is_verified: otherUser?.is_verified
         };
       });
@@ -72,6 +72,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       // Subscribe to new messages to refresh conversations
       const channel = supabase
         .channel(`chat_updates:${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', // Listen to all events on messages to catch read status changes
+          schema: 'public', 
+          table: 'messages'
+        }, () => {
+          fetchConversations();
+        })
         .on('postgres_changes', { 
           event: 'UPDATE', 
           schema: 'public', 

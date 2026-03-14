@@ -392,19 +392,19 @@ CREATE POLICY "Users can manage own likes" ON public.likes FOR ALL USING (auth.u
 CREATE POLICY "Users can manage own follows" ON public.follows FOR ALL USING (auth.uid() = follower_id);
 CREATE POLICY "Users can manage own bookmarks" ON public.bookmarks FOR ALL USING (auth.uid() = user_id);
 
--- Chat
+-- Chat (Swiss Watch Anti-Recursion Logic)
+CREATE POLICY "Participants are viewable by authenticated users" ON public.conversation_participants FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can join conversations" ON public.conversation_participants FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
 CREATE POLICY "Users can view their conversations" ON public.conversations FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = id AND user_id = auth.uid())
 );
-CREATE POLICY "Users can view their participation" ON public.conversation_participants FOR SELECT USING (
-  EXISTS (SELECT 1 FROM public.conversation_participants AS p WHERE p.conversation_id = conversation_id AND p.user_id = auth.uid())
-);
+CREATE POLICY "Authenticated users can start conversations" ON public.conversations FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
 CREATE POLICY "Users can read their messages" ON public.messages FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = messages.conversation_id AND user_id = auth.uid())
 );
-CREATE POLICY "Users can send messages in their chats" ON public.messages FOR INSERT WITH CHECK (
-  auth.uid() = sender_id AND EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = messages.conversation_id AND user_id = auth.uid())
-);
+CREATE POLICY "Users can send messages" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
 -- Appointments
 CREATE POLICY "Users can view their appointments" ON public.appointments FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
@@ -412,7 +412,9 @@ CREATE POLICY "Users can create appointments" ON public.appointments FOR INSERT 
 CREATE POLICY "Users can update their appointments" ON public.appointments FOR UPDATE USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
 
 -- Notifications
-CREATE POLICY "Users can manage their notifications" ON public.notifications FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can view their notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Authenticated users can create notifications" ON public.notifications FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can manage their own notifications" ON public.notifications FOR ALL USING (auth.uid() = user_id);
 
 -- Ads
 CREATE POLICY "Active ads are viewable by everyone" ON public.ads FOR SELECT USING (is_active = true);

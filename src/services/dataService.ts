@@ -1013,6 +1013,7 @@ export const dataService = {
   },
 
   async markMessagesAsRead(conversationId: string, userId: string) {
+    // 1. Marcar mensajes como leídos
     const { error } = await supabase
       .from('messages')
       .update({ is_read: true })
@@ -1020,6 +1021,18 @@ export const dataService = {
       .neq('sender_id', userId);
     
     if (error) throw error;
+
+    // 2. Marcar notificaciones de tipo 'message' como leídas para este usuario
+    try {
+      await supabase
+        .from('notifications')
+        .update({ read: 1 })
+        .eq('user_id', userId)
+        .eq('type', 'message');
+    } catch (nErr) {
+      console.error('Error clearing message notifications:', nErr);
+    }
+
     return { success: true };
   },
 
@@ -1199,8 +1212,17 @@ export const dataService = {
 
           if (pError) console.error('Error fetching participants:', pError);
 
+          // Obtener mensajes no leídos
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .eq('is_read', false)
+            .neq('sender_id', userId);
+
           return {
             ...conv,
+            unread_count: unreadCount || 0,
             participants: participants?.map((p: any) => p.user).filter(u => u.id !== userId) || []
           };
         })
@@ -1244,6 +1266,28 @@ export const dataService = {
         last_message_at: new Date().toISOString() 
       })
       .eq('id', conversationId);
+
+    // Crear notificación para el destinatario
+    try {
+      const { data: participants } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', senderId);
+      
+      if (participants && participants.length > 0) {
+        for (const p of participants) {
+          await this.createNotification({
+            user_id: p.user_id,
+            from_user_id: senderId,
+            type: 'message',
+            content: content.length > 50 ? content.substring(0, 47) + '...' : content
+          });
+        }
+      }
+    } catch (nErr) {
+      console.error('Error creating message notification:', nErr);
+    }
 
     return data;
   },

@@ -11,10 +11,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { dataService } from '../../services/dataService';
 import { supabase } from '../../lib/supabase';
+import { useNotifications } from '../../context/NotificationContext';
 
 // --- Sub-component: ChatWindow ---
 const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId, onClose }) => {
   const { user: currentUser } = useAuth();
+  const { refreshCounts } = useNotifications();
   const [targetUser, setTargetUser] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -43,6 +45,10 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
         // 3. Fetch initial messages
         const data = await dataService.getMessages(convId);
         setMessages(data);
+
+        // 4. Mark messages as read
+        await dataService.markMessagesAsRead(convId, currentUser.id);
+        refreshCounts();
       } catch (error) {
         console.error('Error initializing chat window:', error);
       } finally {
@@ -63,11 +69,17 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
         schema: 'public', 
         table: 'messages',
         filter: `conversation_id=eq.${conversationId}`
-      }, (payload) => {
+      }, async (payload) => {
         setMessages(prev => {
           if (prev.some(m => m.id === payload.new.id)) return prev;
           return [...prev, payload.new];
         });
+
+        // Mark as read if it's from the other user
+        if (payload.new.sender_id !== currentUser?.id) {
+          await dataService.markMessagesAsRead(conversationId, currentUser?.id || '');
+          refreshCounts();
+        }
       })
       .subscribe();
 

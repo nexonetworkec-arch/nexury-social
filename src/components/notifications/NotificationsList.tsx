@@ -11,6 +11,7 @@ const NotificationItem = ({ type, from_user_id, from_username, from_display_name
       case 'like': return <Heart size={16} className="text-rose-500 fill-rose-500" />;
       case 'comment': return <MessageCircle size={16} className="text-indigo-500 fill-indigo-500" />;
       case 'follow': return <UserPlus size={16} className="text-emerald-500" />;
+      case 'message': return <MessageCircle size={16} className="text-blue-500 fill-blue-500" />;
       default: return <Star size={16} className="text-amber-500 fill-amber-500" />;
     }
   };
@@ -20,6 +21,7 @@ const NotificationItem = ({ type, from_user_id, from_username, from_display_name
       case 'like': return 'le dio me gusta a tu publicación';
       case 'comment': return 'comentó tu publicación';
       case 'follow': return 'comenzó a seguirte';
+      case 'message': return 'te envió un mensaje';
       default: return 'interactuó contigo';
     }
   };
