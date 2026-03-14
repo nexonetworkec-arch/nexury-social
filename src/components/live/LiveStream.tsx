@@ -36,10 +36,13 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   
   const localVideoRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -95,64 +98,109 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
   useEffect(() => {
     let agoraClient: IAgoraRTCClient;
+    let audioTrack: IMicrophoneAudioTrack | null = null;
+    let videoTrack: ICameraVideoTrack | null = null;
 
     const init = async () => {
-      agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-      setClient(agoraClient);
+      if (isInitialized.current) return;
+      isInitialized.current = true;
+      setIsInitializing(true);
+      setInitError(null);
 
-      if (role === 'host') {
-        const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-        setLocalAudioTrack(audioTrack);
-        setLocalVideoTrack(videoTrack);
-        
-        await agoraClient.join(APP_ID, channelName, null, user?.id);
-        await agoraClient.publish([audioTrack, videoTrack]);
-        
-        if (localVideoRef.current) {
-          videoTrack.play(localVideoRef.current);
+      try {
+        agoraClient = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+        setClient(agoraClient);
+
+        if (role === 'host') {
+          try {
+            const tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
+            audioTrack = tracks[0];
+            videoTrack = tracks[1];
+            
+            setLocalAudioTrack(audioTrack);
+            setLocalVideoTrack(videoTrack);
+            
+            await agoraClient.join(APP_ID, channelName, null, user?.id);
+            await agoraClient.publish([audioTrack, videoTrack]);
+            
+            if (localVideoRef.current) {
+              videoTrack.play(localVideoRef.current);
+            }
+
+            // Registrar en DB
+            const stream = await dataService.startLiveStream(user!.id, streamTitle);
+            setStreamId(stream.id);
+          } catch (err: any) {
+            console.error("Error creating tracks:", err);
+            if (err.code === 'PERMISSION_DENIED') {
+              setInitError("Permiso denegado para acceder a la cámara o micrófono.");
+            } else if (err.code === 'NOT_READABLE') {
+              setInitError("La cámara o el micrófono ya están en uso por otra aplicación.");
+            } else {
+              setInitError("No se pudo acceder a la cámara o el micrófono.");
+            }
+            throw err;
+          }
+        } else {
+          await agoraClient.join(APP_ID, channelName, null, user?.id);
+          
+          agoraClient.on('user-published', async (remoteUser, mediaType) => {
+            await agoraClient.subscribe(remoteUser, mediaType);
+            if (mediaType === 'video') {
+              setRemoteUsers(prev => [...prev, remoteUser]);
+              setTimeout(() => {
+                if (remoteVideoRef.current) {
+                  remoteUser.videoTrack?.play(remoteVideoRef.current);
+                }
+              }, 100);
+            }
+            if (mediaType === 'audio') {
+              remoteUser.audioTrack?.play();
+            }
+          });
+
+          agoraClient.on('user-unpublished', (remoteUser) => {
+            setRemoteUsers(prev => prev.filter(u => u.uid !== remoteUser.uid));
+          });
         }
-
-        // Registrar en DB
-        const stream = await dataService.startLiveStream(user!.id, streamTitle);
-        setStreamId(stream.id);
-      } else {
-        await agoraClient.join(APP_ID, channelName, null, user?.id);
-        
-        agoraClient.on('user-published', async (remoteUser, mediaType) => {
-          await agoraClient.subscribe(remoteUser, mediaType);
-          if (mediaType === 'video') {
-            setRemoteUsers(prev => [...prev, remoteUser]);
-            setTimeout(() => {
-              if (remoteVideoRef.current) {
-                remoteUser.videoTrack?.play(remoteVideoRef.current);
-              }
-            }, 100);
-          }
-          if (mediaType === 'audio') {
-            remoteUser.audioTrack?.play();
-          }
-        });
-
-        agoraClient.on('user-unpublished', (remoteUser) => {
-          setRemoteUsers(prev => prev.filter(u => u.uid !== remoteUser.uid));
-        });
+      } catch (err) {
+        console.error("Agora Init Error:", err);
+        if (!initError) setInitError("Error al conectar con el servidor de streaming.");
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     if (APP_ID) {
       init();
     } else {
-      console.error("Agora App ID is missing");
+      setInitError("Falta la configuración de Agora (App ID).");
+      setIsInitializing(false);
     }
 
     return () => {
       const leave = async () => {
         if (role === 'host' && streamId) {
-          await dataService.endLiveStream(streamId, user!.id);
+          try {
+            await dataService.endLiveStream(streamId, user!.id);
+          } catch (e) {
+            console.error("Error ending stream in DB:", e);
+          }
         }
-        localAudioTrack?.close();
-        localVideoTrack?.close();
-        await agoraClient?.leave();
+        
+        if (audioTrack) {
+          audioTrack.stop();
+          audioTrack.close();
+        }
+        if (videoTrack) {
+          videoTrack.stop();
+          videoTrack.close();
+        }
+        
+        if (agoraClient) {
+          await agoraClient.leave();
+        }
+        isInitialized.current = false;
       };
       leave();
     };
@@ -198,6 +246,41 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
         {/* Video Container */}
         <div ref={role === 'host' ? localVideoRef : remoteVideoRef} className="w-full h-full object-cover" />
         
+        {/* Loading / Error States */}
+        <AnimatePresence>
+          {(isInitializing || initError) && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-10 bg-neutral-900 flex flex-col items-center justify-center p-8 text-center"
+            >
+              {isInitializing ? (
+                <>
+                  <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+                  <p className="text-white font-medium">Conectando al stream...</p>
+                </>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-4">
+                    <VideoOff size={32} />
+                  </div>
+                  <h3 className="text-white font-bold text-lg mb-2">Error de Conexión</h3>
+                  <p className="text-white/60 text-sm max-w-xs mb-6">{initError}</p>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={onClose} className="rounded-xl">
+                      Cerrar
+                    </Button>
+                    <Button onClick={() => { isInitialized.current = false; window.location.reload(); }} className="rounded-xl">
+                      Reintentar
+                    </Button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Overlay Info */}
         <div className="absolute top-6 left-6 flex items-center gap-3">
           <div className="bg-rose-600 text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider animate-pulse">
