@@ -164,7 +164,7 @@ export const LiveView: React.FC = () => {
                 </div>
 
                 <div className="p-6 flex items-center gap-4">
-                  <img src={stream.avatar_url} className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm" alt="" />
+                  <img src={stream.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${stream.user_id}`} className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm" alt="" referrerPolicy="no-referrer" />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-slate-900 truncate">{stream.title}</h3>
                     <div className="flex items-center gap-1.5">

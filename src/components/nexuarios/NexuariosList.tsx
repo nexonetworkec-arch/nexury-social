@@ -108,7 +108,7 @@ export const NexuariosList = ({ initialSearchQuery = '' }: { initialSearchQuery?
                   className="relative flex-shrink-0"
                 >
                   <img
-                    src={nexuario.avatar_url}
+                    src={nexuario.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${nexuario.id}`}
                     alt={nexuario.display_name}
                     className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm group-hover:scale-105 transition-transform"
                     referrerPolicy="no-referrer"

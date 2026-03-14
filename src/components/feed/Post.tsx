@@ -298,7 +298,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
       <div className="p-4 sm:p-6 flex gap-3 sm:gap-4">
         <div className="relative h-fit cursor-pointer" onClick={handleProfileClick}>
           <LiveIndicator isLive={(post as any).is_live}>
-            <img src={post.avatar_url} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-sm group-hover/post:shadow-md transition-shadow" alt={post.username} referrerPolicy="no-referrer" />
+            <img src={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user_id}`} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-sm group-hover/post:shadow-md transition-shadow" alt={post.username} referrerPolicy="no-referrer" />
           </LiveIndicator>
           <div className="absolute -bottom-1 -right-1">
             <UserStatus userId={post.user_id} size="sm" />
@@ -412,13 +412,13 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
             <div className="mt-3 sm:mt-4 rounded-2xl sm:rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm group-hover/post:shadow-md transition-all duration-500">
               {post.media_type === 'video' ? (
                 <video 
-                  src={post.image_url} 
+                  src={post.image_url || undefined} 
                   className="w-full h-auto max-h-[400px] sm:max-h-[550px] object-cover" 
                   controls
                 />
               ) : (
                 <img 
-                  src={post.image_url} 
+                  src={post.image_url || undefined} 
                   className="w-full h-auto max-h-[400px] sm:max-h-[550px] object-cover hover:scale-105 transition-transform duration-700" 
                   alt="Post content" 
                   referrerPolicy="no-referrer"
@@ -600,7 +600,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
           >
             <div className="p-6">
               <form onSubmit={handleCommentSubmit} className="flex gap-4 mb-6">
-                <img src={user?.avatar_url} className="w-9 h-9 rounded-xl shadow-sm" alt="Avatar" referrerPolicy="no-referrer" />
+                <img src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} className="w-9 h-9 rounded-xl shadow-sm" alt="Avatar" referrerPolicy="no-referrer" />
                 <div className="flex-1 relative">
                   <input 
                     type="text" 
@@ -625,7 +625,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
               <div className="space-y-6">
                 {comments.map((comment) => (
                   <div key={comment.id} className="flex gap-4 group/comment">
-                    <img src={comment.avatar_url} className="w-9 h-9 rounded-xl object-cover shadow-sm" alt={comment.username} referrerPolicy="no-referrer" />
+                    <img src={comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user_id}`} className="w-9 h-9 rounded-xl object-cover shadow-sm" alt={comment.username} referrerPolicy="no-referrer" />
                     <div className="flex-1">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">

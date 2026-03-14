@@ -128,6 +128,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                       src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} 
                       className="w-[15vh] h-[15vh] max-w-[80px] max-h-[80px] sm:max-w-[100px] sm:max-h-[100px] rounded-[1.2rem] sm:rounded-[1.5rem] object-cover border-2 border-white shadow-lg transition-transform group-hover:scale-105" 
                       alt="Avatar Preview" 
+                      referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-black/30 rounded-[1.2rem] sm:rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Camera className="text-white" size={20} />

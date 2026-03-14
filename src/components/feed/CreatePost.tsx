@@ -66,7 +66,7 @@ export const CreatePost = ({ onPostCreated }: { onPostCreated: (post: any) => vo
     <div className="p-4 sm:p-6 border-b border-slate-100 bg-white">
       <div className="flex gap-3 sm:gap-4">
         <div className="relative shrink-0">
-          <img src={user?.avatar_url} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-md shadow-slate-200" alt="Avatar" />
+          <img src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-md shadow-slate-200" alt="Avatar" />
         </div>
         <div className="flex-1">
           <div className="flex flex-col mb-2">
@@ -90,9 +90,9 @@ export const CreatePost = ({ onPostCreated }: { onPostCreated: (post: any) => vo
           {mediaUrl && (
             <div className="relative mt-4 rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
               {mediaType === 'image' ? (
-                <img src={mediaUrl} className="w-full h-auto" alt="Vista previa" />
+                <img src={mediaUrl || undefined} className="w-full h-auto" alt="Vista previa" />
               ) : (
-                <video src={mediaUrl} className="w-full h-auto" controls />
+                <video src={mediaUrl || undefined} className="w-full h-auto" controls />
               )}
               <Button 
                 size="icon"

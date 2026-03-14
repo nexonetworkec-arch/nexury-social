@@ -58,7 +58,7 @@ export const AdCard: React.FC<AdCardProps> = ({ ad }) => {
       <div className="bg-white rounded-3xl border border-indigo-100 overflow-hidden shadow-sm hover:shadow-md transition-all group">
         <div className="relative h-48 sm:h-64 overflow-hidden">
           <img 
-            src={ad.image_url} 
+            src={ad.image_url || undefined} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
             alt={ad.title}
             referrerPolicy="no-referrer"

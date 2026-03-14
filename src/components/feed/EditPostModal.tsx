@@ -115,9 +115,9 @@ export const EditPostModal: React.FC<EditPostModalProps> = ({ isOpen, onClose, p
                   {mediaUrl && (
                     <div className="relative rounded-xl sm:rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
                       {mediaType === 'image' ? (
-                        <img src={mediaUrl} className="w-full h-auto max-h-[200px] object-cover" alt="Preview" />
+                        <img src={mediaUrl || undefined} className="w-full h-auto max-h-[200px] object-cover" alt="Preview" />
                       ) : (
-                        <video src={mediaUrl} className="w-full h-auto max-h-[200px] object-cover" controls />
+                        <video src={mediaUrl || undefined} className="w-full h-auto max-h-[200px] object-cover" controls />
                       )}
                       <button 
                         type="button"

@@ -52,11 +52,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       const msgChannel = supabase
         .channel(`messages_count:${userId}`)
         .on('postgres_changes', { 
-          event: '*', // Listen to all events (INSERT, UPDATE) to catch read status changes
+          event: '*', 
           schema: 'public', 
-          table: 'messages'
-          // We remove the filter because receiver_id doesn't exist and 
-          // we want to catch updates to is_read
+          table: 'messages',
+          filter: `receiver_id=eq.${userId}`
         }, () => {
           fetchCounts();
         })

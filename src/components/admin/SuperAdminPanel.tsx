@@ -1077,7 +1077,7 @@ export const SuperAdminPanel = () => {
                     <div key={u.id} className="flex flex-col bg-white border border-slate-100 rounded-2xl overflow-hidden hover:border-indigo-100 transition-all">
                       <div className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-3">
-                          <img src={u.avatar_url} className="w-10 h-10 rounded-xl object-cover" alt="" />
+                          <img src={u.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.id}`} className="w-10 h-10 rounded-xl object-cover" alt="" referrerPolicy="no-referrer" />
                           <div>
                             <div className="flex items-center gap-1">
                               <p className="font-bold text-slate-900 text-sm">{u.display_name}</p>
@@ -1133,7 +1133,7 @@ export const SuperAdminPanel = () => {
                     <div key={item.id} className="flex flex-col bg-white border border-slate-100 rounded-2xl overflow-hidden hover:border-indigo-100 transition-all">
                       <div className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-3">
-                          <img src={item.avatar_url} className="w-10 h-10 rounded-xl object-cover" alt="" />
+                          <img src={item.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.id}`} className="w-10 h-10 rounded-xl object-cover" alt="" referrerPolicy="no-referrer" />
                           <div>
                             <div className="flex items-center gap-1">
                               <p className="font-bold text-slate-900 text-sm">{item.display_name}</p>
@@ -1264,7 +1264,7 @@ export const SuperAdminPanel = () => {
                           >
                             {newAd.image_url ? (
                               <>
-                                <img src={newAd.image_url} className="w-full h-full object-cover" alt="Preview" />
+                                <img src={newAd.image_url} className="w-full h-full object-cover" alt="Preview" referrerPolicy="no-referrer" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <Upload className="text-white" size={24} />
                                 </div>
@@ -1337,7 +1337,7 @@ export const SuperAdminPanel = () => {
                       <div key={ad.id} className="bg-white border border-slate-100 rounded-3xl overflow-hidden hover:shadow-md transition-all group">
                         <div className="flex flex-col sm:flex-row">
                           <div className="sm:w-48 h-32 bg-slate-100 relative overflow-hidden">
-                            <img src={ad.image_url} className="w-full h-full object-cover" alt="" />
+                            <img src={ad.image_url || undefined} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
                             <div className={cn(
                               "absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider",
                               ad.is_active ? "bg-emerald-500 text-white" : "bg-slate-500 text-white"

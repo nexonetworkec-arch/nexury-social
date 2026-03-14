@@ -217,7 +217,7 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
       >
         <div className="flex items-center gap-2">
           <div className="relative">
-            <img src={targetUser.avatar_url} className="w-8 h-8 rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
+            <img src={targetUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${targetUser.id}`} className="w-8 h-8 rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
             <div className="absolute -bottom-0.5 -right-0.5">
               <UserStatus userId={targetUser.id} size="sm" />
             </div>
@@ -517,7 +517,7 @@ const ChatHistoryPanel: React.FC = () => {
                     className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group"
                   >
                     <div className="relative shrink-0">
-                      <img src={conv.avatar_url} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" referrerPolicy="no-referrer" />
+                      <img src={conv.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${conv.user_id}`} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" referrerPolicy="no-referrer" />
                       <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -572,7 +572,7 @@ const ChatHistoryPanel: React.FC = () => {
                         className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group"
                       >
                         <div className="relative shrink-0">
-                          <img src={u.avatar_url} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" referrerPolicy="no-referrer" />
+                          <img src={u.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.id}`} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" referrerPolicy="no-referrer" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1 min-w-0">

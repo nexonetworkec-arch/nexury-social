@@ -1235,14 +1235,8 @@ export const dataService = {
     const { count, error } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true })
-      .neq('sender_id', userId)
-      .eq('is_read', false)
-      .in('conversation_id', (
-        await supabase
-          .from('conversation_participants')
-          .select('conversation_id')
-          .eq('user_id', userId)
-      ).data?.map(c => c.conversation_id) || []);
+      .eq('receiver_id', userId)
+      .eq('is_read', false);
     
     if (error) throw error;
     return count || 0;
@@ -1499,9 +1493,24 @@ export const dataService = {
   },
 
   async sendMessage(conversationId: string, senderId: string, content: string): Promise<any> {
+    // Buscar el destinatario para el campo receiver_id
+    const { data: participants } = await supabase
+      .from('conversation_participants')
+      .select('user_id')
+      .eq('conversation_id', conversationId)
+      .neq('user_id', senderId)
+      .limit(1);
+    
+    const receiverId = participants?.[0]?.user_id;
+
     const { data, error } = await supabase
       .from('messages')
-      .insert([{ conversation_id: conversationId, sender_id: senderId, content }])
+      .insert([{ 
+        conversation_id: conversationId, 
+        sender_id: senderId, 
+        receiver_id: receiverId,
+        content 
+      }])
       .select()
       .single();
 
@@ -1518,27 +1527,22 @@ export const dataService = {
 
     // Crear notificación para el destinatario
     try {
-      const { data: participants } = await supabase
-        .from('conversation_participants')
-        .select('user_id')
-        .eq('conversation_id', conversationId)
-        .neq('user_id', senderId);
-      
-      if (participants && participants.length > 0) {
-        for (const p of participants) {
-          await this.createNotification({
-            user_id: p.user_id,
-            from_user_id: senderId,
-            type: 'message',
-            content: content.length > 50 ? content.substring(0, 47) + '...' : content
-          });
-        }
+      if (receiverId) {
+        await this.createNotification({
+          user_id: receiverId,
+          from_user_id: senderId,
+          type: 'message',
+          content: content.length > 50 ? content.substring(0, 47) + '...' : content
+        });
       }
     } catch (nErr) {
       console.error('Error creating message notification:', nErr);
     }
 
-    return data;
+    return {
+      ...data,
+      receiver_id: receiverId
+    };
   },
 
   async deleteMessageForEveryone(messageId: string): Promise<boolean> {

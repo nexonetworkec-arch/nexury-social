@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
     sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    receiver_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE, -- Agregado para facilitar consultas de no leídos
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     is_deleted_for_everyone BOOLEAN DEFAULT FALSE,
@@ -111,8 +112,8 @@ CREATE TABLE IF NOT EXISTS public.messages (
 -- NOTIFICATIONS
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-    from_user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL, -- Destinatario
+    from_user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL, -- Remitente
     type TEXT NOT NULL, -- 'like', 'comment', 'follow', 'message', 'appointment'
     post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
     content TEXT,
@@ -164,9 +165,11 @@ CREATE TABLE IF NOT EXISTS public.ads (
 -- VERIFIED BENEFITS
 CREATE TABLE IF NOT EXISTS public.verified_benefits (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    title TEXT NOT NULL,
+    name TEXT NOT NULL, -- Cambiado de title a name
+    slug TEXT UNIQUE, -- Agregado slug
     description TEXT,
-    icon TEXT,
+    icon_name TEXT, -- Cambiado de icon a icon_name
+    is_active BOOLEAN DEFAULT TRUE, -- Agregado is_active
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -310,9 +313,9 @@ CREATE POLICY "conversations_update_safe" ON public.conversations FOR UPDATE
 USING (EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = id AND user_id = auth.uid()));
 
 CREATE POLICY "messages_select_safe" ON public.messages FOR SELECT 
-USING (EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = conversation_id AND user_id = auth.uid()));
+USING (auth.uid() = sender_id OR auth.uid() = receiver_id OR EXISTS (SELECT 1 FROM public.conversation_participants WHERE conversation_id = messages.conversation_id AND user_id = auth.uid()));
 CREATE POLICY "messages_insert_self" ON public.messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
-CREATE POLICY "messages_update_self" ON public.messages FOR UPDATE USING (auth.uid() = sender_id);
+CREATE POLICY "messages_update_self" ON public.messages FOR UPDATE USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 
 -- POLICIES: NOTIFICATIONS
 CREATE POLICY "notifications_read_self" ON public.notifications FOR SELECT USING (auth.uid() = user_id);

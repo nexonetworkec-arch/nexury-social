@@ -91,6 +91,7 @@ export const AppointmentsList = () => {
                       src={otherUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUser.username}`} 
                       alt={otherUser.name}
                       className="w-12 h-12 rounded-2xl object-cover border-2 border-white shadow-sm"
+                      referrerPolicy="no-referrer"
                     />
                     <div>
                       <h3 className="font-bold text-slate-900">{appointment.title}</h3>
