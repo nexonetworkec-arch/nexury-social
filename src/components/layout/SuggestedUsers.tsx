@@ -89,7 +89,7 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
       <div className="flex items-center gap-3">
         <div className="relative">
           <LiveIndicator isLive={isLive} size="sm">
-            <img src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} className="w-10 h-10 rounded-full object-cover" alt="Usuario" />
+            <img src={avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`} className="w-10 h-10 rounded-full object-cover" alt="Usuario" referrerPolicy="no-referrer" />
           </LiveIndicator>
           <div className="absolute -bottom-0.5 -right-0.5">
             <UserStatus userId={id} size="sm" />

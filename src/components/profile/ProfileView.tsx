@@ -334,7 +334,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
       
       <div className="flex flex-col items-center gap-4 sm:gap-6 mt-4">
         <div className="relative group">
-          <img src={profileUser.avatar_url} className="w-24 h-24 sm:w-32 sm:h-32 rounded-[2rem] sm:rounded-[2.5rem] object-cover shadow-xl border-4 border-white" alt={profileUser.username} />
+          <img src={profileUser.avatar_url} className="w-24 h-24 sm:w-32 sm:h-32 rounded-[2rem] sm:rounded-[2.5rem] object-cover shadow-xl border-4 border-white" alt={profileUser.username} referrerPolicy="no-referrer" />
           {isOwnProfile && (
             <button 
               onClick={() => setIsEditProfileOpen(true)}

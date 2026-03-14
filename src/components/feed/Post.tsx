@@ -14,7 +14,7 @@ import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal
 import { EditPostModal } from './EditPostModal';
 import { supabase } from '../../lib/supabase';
 
-export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
+export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPost }) => {
   const { user } = useAuth();
   const [post, setPost] = useState(initialPost);
   const [liked, setLiked] = useState((initialPost as any).user_has_liked || false);
@@ -31,6 +31,7 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAppointmentsEnabled, setIsAppointmentsEnabled] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
   // Sincronizar estado local con props cuando hay cambios en tiempo real desde el Feed
   React.useEffect(() => {
@@ -236,13 +237,35 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
     e.preventDefault();
     if (!newComment.trim() || isSubmitting || !user) return;
     
+    const commentText = newComment;
+    setNewComment('');
+    
+    // Optimistic comment
+    const tempId = Math.random().toString(36).substring(7);
+    const optimisticComment: CommentType = {
+      id: tempId,
+      post_id: post.id,
+      user_id: user.id,
+      content: commentText,
+      created_at: new Date().toISOString(),
+      username: user.username,
+      avatar_url: user.avatar_url,
+      display_name: user.display_name,
+      is_verified: !!user.is_verified
+    };
+    
+    setComments(prev => [...prev, optimisticComment]);
+    
     setIsSubmitting(true);
     try {
-      const comment = await dataService.createComment(post.id, user.id, newComment);
-      setComments([...comments, comment]);
-      setNewComment('');
+      const comment = await dataService.createComment(post.id, user.id, commentText);
+      // Replace optimistic comment with real one
+      setComments(prev => prev.map(c => c.id === tempId ? comment : c));
     } catch (error) {
       console.error('Error posting comment', error);
+      // Remove optimistic comment on error
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setNewComment(commentText); // Restore text
     } finally {
       setIsSubmitting(false);
     }
@@ -275,7 +298,7 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
       <div className="p-4 sm:p-6 flex gap-3 sm:gap-4">
         <div className="relative h-fit cursor-pointer" onClick={handleProfileClick}>
           <LiveIndicator isLive={(post as any).is_live}>
-            <img src={post.avatar_url} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-sm group-hover/post:shadow-md transition-shadow" alt={post.username} />
+            <img src={post.avatar_url} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl object-cover shadow-sm group-hover/post:shadow-md transition-shadow" alt={post.username} referrerPolicy="no-referrer" />
           </LiveIndicator>
           <div className="absolute -bottom-1 -right-1">
             <UserStatus userId={post.user_id} size="sm" />
@@ -296,57 +319,88 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
                 <span className="text-slate-400 text-[10px] sm:text-xs font-medium whitespace-nowrap">{formatTime(post.created_at)}</span>
               </div>
             </div>
-            <div className="relative group/more">
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-600">
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn("text-slate-400 hover:text-slate-600", showOptionsMenu && "text-indigo-600 bg-indigo-50")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptionsMenu(!showOptionsMenu);
+                }}
+              >
                 <MoreHorizontal size={18} />
               </Button>
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-100 rounded-2xl shadow-xl opacity-0 invisible group-hover/more:opacity-100 group-hover/more:visible transition-all z-30 overflow-hidden">
-                {(user?.id === post.user_id || user?.is_admin || user?.is_super_admin) ? (
+              <AnimatePresence>
+                {showOptionsMenu && (
                   <>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsEditModalOpen(true);
-                      }}
-                      className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium flex items-center gap-2"
+                    <div className="fixed inset-0 z-20" onClick={() => setShowOptionsMenu(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-100 rounded-2xl shadow-xl z-30 overflow-hidden"
                     >
-                      <Edit2 size={16} className="text-indigo-500" />
-                      Editar publicación
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowDeleteConfirm(true);
-                      }}
-                      disabled={isDeleting}
-                      className="w-full text-left px-5 py-3 text-sm text-rose-600 hover:bg-rose-50 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <Trash2 size={16} />
-                      Eliminar publicación
-                    </button>
+                      {(user?.id === post.user_id || user?.is_admin || user?.is_super_admin) ? (
+                        <>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsEditModalOpen(true);
+                              setShowOptionsMenu(false);
+                            }}
+                            className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium flex items-center gap-2"
+                          >
+                            <Edit2 size={16} className="text-indigo-500" />
+                            Editar publicación
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowDeleteConfirm(true);
+                              setShowOptionsMenu(false);
+                            }}
+                            disabled={isDeleting}
+                            className="w-full text-left px-5 py-3 text-sm text-rose-600 hover:bg-rose-50 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                          >
+                            <Trash2 size={16} />
+                            Eliminar publicación
+                          </button>
+                        </>
+                      ) : (
+                        <button 
+                          onClick={(e) => {
+                            handleReportPost(e);
+                            setShowOptionsMenu(false);
+                          }}
+                          className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium flex items-center gap-2"
+                        >
+                          <AlertCircle size={16} className="text-rose-500" />
+                          Reportar publicación
+                        </button>
+                      )}
+                      <button 
+                        onClick={(e) => {
+                          handleNotInterested(e);
+                          setShowOptionsMenu(false);
+                        }}
+                        className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium"
+                      >
+                        No me interesa
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          handleCopyLink(e);
+                          setShowOptionsMenu(false);
+                        }}
+                        className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium"
+                      >
+                        Copiar enlace
+                      </button>
+                    </motion.div>
                   </>
-                ) : (
-                  <button 
-                    onClick={handleReportPost}
-                    className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium flex items-center gap-2"
-                  >
-                    <AlertCircle size={16} className="text-rose-500" />
-                    Reportar publicación
-                  </button>
                 )}
-                <button 
-                  onClick={handleNotInterested}
-                  className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-                >
-                  No me interesa
-                </button>
-                <button 
-                  onClick={handleCopyLink}
-                  className="w-full text-left px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-                >
-                  Copiar enlace
-                </button>
-              </div>
+              </AnimatePresence>
             </div>
           </div>
           
@@ -546,7 +600,7 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
           >
             <div className="p-6">
               <form onSubmit={handleCommentSubmit} className="flex gap-4 mb-6">
-                <img src={user?.avatar_url} className="w-9 h-9 rounded-xl shadow-sm" alt="Avatar" />
+                <img src={user?.avatar_url} className="w-9 h-9 rounded-xl shadow-sm" alt="Avatar" referrerPolicy="no-referrer" />
                 <div className="flex-1 relative">
                   <input 
                     type="text" 
@@ -571,7 +625,7 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
               <div className="space-y-6">
                 {comments.map((comment) => (
                   <div key={comment.id} className="flex gap-4 group/comment">
-                    <img src={comment.avatar_url} className="w-9 h-9 rounded-xl object-cover shadow-sm" alt={comment.username} />
+                    <img src={comment.avatar_url} className="w-9 h-9 rounded-xl object-cover shadow-sm" alt={comment.username} referrerPolicy="no-referrer" />
                     <div className="flex-1">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
@@ -597,5 +651,5 @@ export const Post: React.FC<{ post: PostType }> = ({ post: initialPost }) => {
       </AnimatePresence>
     </motion.div>
   );
-};
+});
 

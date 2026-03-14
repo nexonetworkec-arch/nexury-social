@@ -217,7 +217,7 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
       >
         <div className="flex items-center gap-2">
           <div className="relative">
-            <img src={targetUser.avatar_url} className="w-8 h-8 rounded-full object-cover" alt="" />
+            <img src={targetUser.avatar_url} className="w-8 h-8 rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
             <div className="absolute -bottom-0.5 -right-0.5">
               <UserStatus userId={targetUser.id} size="sm" />
             </div>
@@ -517,7 +517,7 @@ const ChatHistoryPanel: React.FC = () => {
                     className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group"
                   >
                     <div className="relative shrink-0">
-                      <img src={conv.avatar_url} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" />
+                      <img src={conv.avatar_url} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" referrerPolicy="no-referrer" />
                       <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -544,7 +544,7 @@ const ChatHistoryPanel: React.FC = () => {
                       )}
                       <button 
                         onClick={(e) => handleDeleteConversation(e, conv.id)}
-                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                         title="Eliminar conversación"
                       >
                         <Trash2 size={14} />
@@ -572,7 +572,7 @@ const ChatHistoryPanel: React.FC = () => {
                         className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all group"
                       >
                         <div className="relative shrink-0">
-                          <img src={u.avatar_url} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" />
+                          <img src={u.avatar_url} className="w-12 h-12 rounded-2xl object-cover shadow-sm" alt="" referrerPolicy="no-referrer" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1 min-w-0">

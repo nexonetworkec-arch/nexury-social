@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar } from './components/layout/Sidebar';
 import { RightPanel } from './components/layout/RightPanel';
@@ -10,15 +10,18 @@ import { NotificationProvider } from './context/NotificationContext';
 import { PresenceProvider } from './context/PresenceContext';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { EditProfileModal } from './components/profile/EditProfileModal';
-import { AdminPanel } from './components/admin/AdminPanel';
-import { SuperAdminPanel } from './components/admin/SuperAdminPanel';
+
+// Lazy load heavy components
+const AdminPanel = lazy(() => import('./components/admin/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const SuperAdminPanel = lazy(() => import('./components/admin/SuperAdminPanel').then(m => ({ default: m.SuperAdminPanel })));
+const AppointmentsList = lazy(() => import('./components/appointments/AppointmentsList').then(m => ({ default: m.AppointmentsList })));
+const NexuariosList = lazy(() => import('./components/nexuarios/NexuariosList').then(m => ({ default: m.NexuariosList })));
+const NotificationsList = lazy(() => import('./components/notifications/NotificationsList').then(m => ({ default: m.NotificationsList })));
+const BookmarksList = lazy(() => import('./components/bookmarks/BookmarksList').then(m => ({ default: m.BookmarksList })));
+const LiveView = lazy(() => import('./components/live/LiveView').then(m => ({ default: m.LiveView })));
+
 import { AccessDenied } from './components/common/AccessDenied';
-import { AppointmentsList } from './components/appointments/AppointmentsList';
 import { ProfileView } from './components/profile/ProfileView';
-import { NexuariosList } from './components/nexuarios/NexuariosList';
-import { NotificationsList } from './components/notifications/NotificationsList';
-import { BookmarksList } from './components/bookmarks/BookmarksList';
-import { LiveView } from './components/live/LiveView';
 import { SuggestedUsers } from './components/layout/SuggestedUsers';
 import { ChatFloatingSystem } from './components/chat/ChatFloatingSystem';
 import { CreatePostModal } from './components/feed/CreatePostModal';
@@ -30,6 +33,7 @@ import { Feather, CheckCircle, Calendar, Settings, Shield, ShieldAlert, Search a
 import { SEO } from './components/common/SEO';
 import { dataService } from './services/dataService';
 import { Button } from './components/ui/Button';
+import { PostSkeleton } from './components/ui/Skeleton';
 
 import { VerifiedBadge } from './components/ui/VerifiedBadge';
 
@@ -318,9 +322,10 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
           </Button>
         </div>
       ) : loading ? (
-        <div className="flex flex-col items-center justify-center p-20 gap-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-          <p className="text-slate-400 font-medium animate-pulse">Cargando tu mundo...</p>
+        <div className="flex flex-col">
+          {[...Array(5)].map((_, i) => (
+            <PostSkeleton key={i} />
+          ))}
         </div>
       ) : (
         <div className="flex flex-col">
@@ -476,100 +481,110 @@ const AppContent = () => {
   }
 
   const renderView = () => {
-    switch (currentView) {
-      case 'Inicio':
-        return (
-          <Feed searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-        );
-      case 'Admin':
-        return (
-          <>
-            {(user?.is_admin || user?.is_super_admin) ? (
-              <AdminPanel />
-            ) : (
-              <AccessDenied requiredRole="Admin" />
-            )}
-          </>
-        );
-      case 'SuperAdmin':
-        return (
-          <>
-            {user?.is_super_admin ? (
-              <SuperAdminPanel />
-            ) : (
-              <AccessDenied requiredRole="Super Admin" />
-            )}
-          </>
-        );
-      case 'Explorar':
-        return (
-          <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white p-4 sm:p-8">
-            <h2 className="text-2xl font-bold mb-6">Explorar</h2>
-            <div className="space-y-8">
-              <section>
-                <div className="relative group mb-6">
-                  <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar personas o publicaciones..." 
-                    className="w-full bg-slate-100 border-2 border-transparent rounded-2xl py-3 pl-12 pr-4 focus:ring-0 focus:border-indigo-500/30 focus:bg-white transition-all outline-none text-sm"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </section>
-              <section>
-                <h3 className="text-lg font-bold mb-4">Comunidad</h3>
-                <div className="bg-slate-50 rounded-3xl overflow-hidden border border-slate-100">
-                  <SuggestedUsers />
-                </div>
-              </section>
-              <section>
-                <h3 className="text-lg font-bold mb-4">Descubre contenido</h3>
+    return (
+      <Suspense fallback={
+        <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white flex flex-col items-center justify-center p-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+        </div>
+      }>
+        {(() => {
+          switch (currentView) {
+            case 'Inicio':
+              return (
                 <Feed searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-              </section>
-            </div>
-          </div>
-        );
-      case 'Perfil':
-        return (
-          <ProfileView userId={selectedUserId} />
-        );
-      case 'Notificaciones':
-        return (
-          <NotificationsList />
-        );
-      case 'Guardados':
-        return (
-          <BookmarksList />
-        );
-      case 'Live':
-        return (
-          <LiveView />
-        );
-      case 'Citas':
-        return (
-          <AppointmentsList />
-        );
-      case 'Nexuarios':
-        return (
-          <NexuariosList initialSearchQuery={searchQuery} />
-        );
-      default:
-        return (
-          <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white flex flex-col items-center justify-center p-12 text-center">
-            <Logo size="lg" animate={true} className="mb-6" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">{currentView}</h2>
-            <p className="text-slate-500">Esta sección está en construcción. ¡Vuelve pronto!</p>
-            <button 
-              onClick={() => navigateTo('Inicio')}
-              className="mt-6 text-indigo-600 font-semibold hover:underline"
-            >
-              Volver al Inicio
-            </button>
-          </div>
-        );
-    }
+              );
+            case 'Admin':
+              return (
+                <>
+                  {(user?.is_admin || user?.is_super_admin) ? (
+                    <AdminPanel />
+                  ) : (
+                    <AccessDenied requiredRole="Admin" />
+                  )}
+                </>
+              );
+            case 'SuperAdmin':
+              return (
+                <>
+                  {user?.is_super_admin ? (
+                    <SuperAdminPanel />
+                  ) : (
+                    <AccessDenied requiredRole="Super Admin" />
+                  )}
+                </>
+              );
+            case 'Explorar':
+              return (
+                <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white p-4 sm:p-8">
+                  <h2 className="text-2xl font-bold mb-6">Explorar</h2>
+                  <div className="space-y-8">
+                    <section>
+                      <div className="relative group mb-6">
+                        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar personas o publicaciones..." 
+                          className="w-full bg-slate-100 border-2 border-transparent rounded-2xl py-3 pl-12 pr-4 focus:ring-0 focus:border-indigo-500/30 focus:bg-white transition-all outline-none text-sm"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </section>
+                    <section>
+                      <h3 className="text-lg font-bold mb-4">Comunidad</h3>
+                      <div className="bg-slate-50 rounded-3xl overflow-hidden border border-slate-100">
+                        <SuggestedUsers />
+                      </div>
+                    </section>
+                    <section>
+                      <h3 className="text-lg font-bold mb-4">Descubre contenido</h3>
+                      <Feed searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+                    </section>
+                  </div>
+                </div>
+              );
+            case 'Perfil':
+              return (
+                <ProfileView userId={selectedUserId} />
+              );
+            case 'Notificaciones':
+              return (
+                <NotificationsList />
+              );
+            case 'Guardados':
+              return (
+                <BookmarksList />
+              );
+            case 'Live':
+              return (
+                <LiveView />
+              );
+            case 'Citas':
+              return (
+                <AppointmentsList />
+              );
+            case 'Nexuarios':
+              return (
+                <NexuariosList initialSearchQuery={searchQuery} />
+              );
+            default:
+              return (
+                <div className="flex-1 w-full max-w-[650px] border-x border-slate-100 min-h-screen bg-white flex flex-col items-center justify-center p-12 text-center">
+                  <Logo size="lg" animate={true} className="mb-6" />
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">{currentView}</h2>
+                  <p className="text-slate-500">Esta sección está en construcción. ¡Vuelve pronto!</p>
+                  <button 
+                    onClick={() => navigateTo('Inicio')}
+                    className="mt-6 text-indigo-600 font-semibold hover:underline"
+                  >
+                    Volver al Inicio
+                  </button>
+                </div>
+              );
+          }
+        })()}
+      </Suspense>
+    );
   };
 
   return (

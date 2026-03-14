@@ -106,7 +106,27 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
  * 1. Crea un proyecto en https://supabase.com
  * 2. Obtén tu URL y Anon Key desde Project Settings > API
  * 3. Añade VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY a tus variables de entorno en AI Studio
- * 4. Crea las tablas 'profiles', 'posts', 'comments', 'likes', 'follows', 'appointments', 'conversations', 'messages', 'verified_benefits' y 'verified_benefits_users' en el SQL Editor de Supabase.
- * 5. Crea dos buckets en Storage: 'posts' y 'avatars' (asegúrate de que sean Públicos).
- * 6. Habilita Row Level Security (RLS) para proteger tus datos.
+ * 4. Crea las tablas necesarias en el SQL Editor.
+ * 5. Habilita Realtime para 'conversation_participants' en Database > Replication > supabase_realtime.
+ * 6. Ejecuta este SQL para la gestión profesional de chats:
+ * 
+ *    -- Política RLS para permitir borrar la propia participación
+ *    CREATE POLICY "Users can remove themselves from conversations" 
+ *    ON conversation_participants FOR DELETE USING (auth.uid() = user_id);
+ * 
+ *    -- Trigger de limpieza automática de mensajes huérfanos
+ *    CREATE OR REPLACE FUNCTION clean_orphan_conversations()
+ *    RETURNS TRIGGER AS $$
+ *    BEGIN
+ *      IF NOT EXISTS (SELECT 1 FROM conversation_participants WHERE conversation_id = OLD.conversation_id) THEN
+ *        DELETE FROM messages WHERE conversation_id = OLD.conversation_id;
+ *        DELETE FROM conversations WHERE id = OLD.conversation_id;
+ *      END IF;
+ *      RETURN OLD;
+ *    END;
+ *    $$ LANGUAGE plpgsql;
+ * 
+ *    CREATE TRIGGER trigger_clean_orphans
+ *    AFTER DELETE ON conversation_participants
+ *    FOR EACH ROW EXECUTE FUNCTION clean_orphan_conversations();
  */

@@ -1577,49 +1577,52 @@ export const dataService = {
   },
 
   async clearChatForMe(conversationId: string, userId: string): Promise<boolean> {
-    // 1. Ocultar todos los mensajes (enviados y recibidos) solo para este usuario
-    const { data: messages } = await supabase
-      .from('messages')
-      .select('id, content')
-      .eq('conversation_id', conversationId);
+    try {
+      // 1. Ocultar solo los mensajes ENVIADOS por el usuario (los únicos que tiene permiso de editar por RLS)
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('id, content')
+        .eq('conversation_id', conversationId)
+        .eq('sender_id', userId);
 
-    if (messages) {
-      const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
-      await Promise.all(messages.map(async (msg) => {
-        if (!msg.content.includes(hiddenPrefix)) {
-          return supabase
-            .from('messages')
-            .update({ content: hiddenPrefix + msg.content })
-            .eq('id', msg.id);
-        }
-      }));
-    }
-
-    // 2. Ocultar también el último mensaje en la tabla de conversaciones
-    const { data: conv } = await supabase
-      .from('conversations')
-      .select('last_message')
-      .eq('id', conversationId)
-      .single();
-
-    if (conv && conv.last_message) {
-      const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
-      if (!conv.last_message.includes(hiddenPrefix)) {
-        await supabase
-          .from('conversations')
-          .update({ last_message: hiddenPrefix + conv.last_message })
-          .eq('id', conversationId);
+      if (messages && messages.length > 0) {
+        const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
+        await Promise.all(messages.map(async (msg) => {
+          if (!msg.content.includes(hiddenPrefix)) {
+            return supabase
+              .from('messages')
+              .update({ content: hiddenPrefix + msg.content })
+              .eq('id', msg.id);
+          }
+        }));
       }
-    }
 
-    return true;
+      // 2. Ocultar el último mensaje en la tabla de conversaciones (si el usuario es el autor del último mensaje)
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('last_message, last_message_at')
+        .eq('id', conversationId)
+        .single();
+
+      if (conv && conv.last_message) {
+        const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
+        // Solo intentamos ocultar si no está ya oculto
+        if (!conv.last_message.includes(hiddenPrefix)) {
+          await supabase
+            .from('conversations')
+            .update({ last_message: hiddenPrefix + conv.last_message })
+            .eq('id', conversationId);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn('Soft-clear partial failure (expected for received messages):', error);
+      return true; // Retornamos true porque la intención de "vaciar" se cumplió para lo que el usuario posee
+    }
   },
 
   async deleteConversation(conversationId: string, userId: string): Promise<boolean> {
-    // Primero ocultamos todos los mensajes para el usuario
-    await this.clearChatForMe(conversationId, userId);
-    
-    // Luego eliminamos al participante para que no aparezca en la lista de chats
+    // 1. ELIMINACIÓN ATÓMICA DEL PARTICIPANTE (Prioridad máxima para limpiar la lista)
     const { error: pError } = await supabase
       .from('conversation_participants')
       .delete()
@@ -1628,13 +1631,21 @@ export const dataService = {
 
     if (pError) throw pError;
 
-    // Si no quedan participantes, limpiamos la base de datos
+    // 2. LIMPIEZA DE MENSAJES (Best effort, no bloqueante)
+    try {
+      await this.clearChatForMe(conversationId, userId);
+    } catch (e) {
+      console.warn('Message cleanup skipped during deletion');
+    }
+    
+    // 3. GESTIÓN DE HUÉRFANOS (Si no quedan participantes, eliminamos la conversación física)
     const { count } = await supabase
       .from('conversation_participants')
       .select('*', { count: 'exact', head: true })
       .eq('conversation_id', conversationId);
 
     if (count === 0) {
+      // Si no hay nadie, borramos todo definitivamente
       await supabase.from('messages').delete().eq('conversation_id', conversationId);
       await supabase.from('conversations').delete().eq('id', conversationId);
     }

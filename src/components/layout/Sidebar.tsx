@@ -7,7 +7,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { Logo } from '../ui/Logo';
 
-const SidebarItem = ({ icon: Icon, label, active, onClick, badgeCount }: { icon: any, label: string, active?: boolean, onClick?: () => void, badgeCount?: number }) => (
+const SidebarItem = React.memo(({ icon: Icon, label, active, onClick, badgeCount }: { icon: any, label: string, active?: boolean, onClick?: () => void, badgeCount?: number }) => (
   <div 
     onClick={onClick}
     className={cn(
@@ -27,7 +27,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick, badgeCount }: { icon:
     </div>
     <span className="text-[1.05rem] hidden lg:block font-medium">{label}</span>
   </div>
-);
+));
 
 export const Sidebar = ({ currentView, onViewChange }: { currentView: string, onViewChange: (view: string) => void }) => {
   const { user, logout } = useAuth();
@@ -74,7 +74,7 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
             className="flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-100"
           >
             <div className="relative">
-              <img src={user?.avatar_url || "https://picsum.photos/seed/john/200"} className="w-11 h-11 rounded-xl object-cover" alt="Usuario" />
+              <img src={user?.avatar_url || "https://picsum.photos/seed/john/200"} className="w-11 h-11 rounded-xl object-cover" alt="Usuario" referrerPolicy="no-referrer" />
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="hidden lg:block flex-1 min-w-0">
