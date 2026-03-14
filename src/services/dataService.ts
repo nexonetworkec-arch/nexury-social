@@ -760,34 +760,18 @@ export const dataService = {
 
   async recordUniqueView(viewerId: string, targetId: string, targetType: 'post' | 'profile'): Promise<boolean> {
     try {
-      const { data, error } = await supabase.rpc('record_unique_view', {
-        p_viewer_id: viewerId,
-        p_target_id: targetId,
-        p_target_type: targetType
+      // Use the new atomic RPC from the Master Setup
+      const { error } = await supabase.rpc('record_view_atomic', {
+        p_post_id: targetId,
+        p_user_id: viewerId
       });
       
       if (error) {
-        // Manejar errores de conflicto (409) que el RPC pueda lanzar si no tiene ON CONFLICT
-        if (error.code === '23505' || error.message?.includes('409')) {
-          return false;
-        }
-
-        // Si el RPC falla por otras razones, intentamos inserción directa
-        if (targetType === 'post') {
-          const { error: insertError } = await supabase
-            .from('post_views')
-            .insert({ post_id: targetId, user_id: viewerId });
-          
-          if (insertError) {
-            if (insertError.code === '23505') return false; // Ya existe
-            throw insertError;
-          }
-          return true;
-        }
+        console.error('Error recording view via RPC:', error);
         return false;
       }
       
-      return !!data;
+      return true;
     } catch (error) {
       console.error('Error recording unique view:', error);
       return false;
@@ -1198,8 +1182,19 @@ export const dataService = {
   async markNotificationAsRead(notificationId: string) {
     const { error } = await supabase
       .from('notifications')
-      .update({ read: 1 })
+      .update({ is_read: true })
       .eq('id', notificationId);
+    
+    if (error) throw error;
+    return { success: true };
+  },
+
+  async markAllNotificationsAsRead(userId: string) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
     
     if (error) throw error;
     return { success: true };
@@ -1230,7 +1225,7 @@ export const dataService = {
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('read', 0);
+      .eq('is_read', false);
     
     if (error) throw error;
     return count || 0;
@@ -1268,10 +1263,10 @@ export const dataService = {
     try {
       await supabase
         .from('notifications')
-        .update({ read: 1 })
+        .update({ is_read: true })
         .eq('user_id', userId)
         .eq('type', 'message')
-        .eq('read', 0);
+        .eq('is_read', false);
     } catch (nErr) {
       console.error('Error clearing message notifications:', nErr);
     }
@@ -1660,7 +1655,7 @@ export const dataService = {
 
   async getOrCreateConversation(user1Id: string, user2Id: string): Promise<string> {
     try {
-      // 1. Buscar si ya existe una conversación entre ambos
+      // 1. Search if a conversation already exists between both
       const { data: user1Convs } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
@@ -1677,35 +1672,19 @@ export const dataService = {
 
       if (commonConv) return commonConv.conversation_id;
 
-      // 2. Si no existe, crearla
-      // Usamos .select() para obtener el ID de la nueva conversación
-      const { data: newConv, error: convError } = await supabase
-        .from('conversations')
-        .insert([{}])
-        .select('id')
-        .single();
+      // 2. If not exists, create it using the atomic RPC to avoid RLS 403 errors
+      console.log('Creating new conversation via RPC...');
+      const { data: newConvId, error: rpcError } = await supabase.rpc(
+        'create_chat_atomic',
+        { p_participant_ids: [user1Id, user2Id] }
+      );
 
-      if (convError) {
-        console.error('Error creating conversation:', convError);
-        throw convError;
+      if (rpcError) {
+        console.error('Error creating conversation via RPC:', rpcError);
+        throw rpcError;
       }
 
-      // 3. Añadir participantes
-      const { error: partError } = await supabase
-        .from('conversation_participants')
-        .insert([
-          { conversation_id: newConv.id, user_id: user1Id },
-          { conversation_id: newConv.id, user_id: user2Id }
-        ]);
-
-      if (partError) {
-        // Si falla al añadir participantes, intentamos limpiar la conversación huérfana
-        console.error('Error adding participants, cleaning up:', partError);
-        await supabase.from('conversations').delete().eq('id', newConv.id);
-        throw partError;
-      }
-
-      return newConv.id;
+      return newConvId;
     } catch (error) {
       console.error('Error in getOrCreateConversation:', error);
       throw error;

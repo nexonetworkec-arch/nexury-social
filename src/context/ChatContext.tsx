@@ -86,9 +86,9 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         }, () => {
           fetchConversations();
         })
-        .on('postgres_changes', {
-          event: 'DELETE',
-          schema: 'public',
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
           table: 'conversation_participants'
         }, () => {
           fetchConversations();

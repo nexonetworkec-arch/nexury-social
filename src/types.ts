@@ -79,7 +79,7 @@ export interface Notification {
   type: string;
   from_user_id: string;
   post_id?: string;
-  read: number;
+  is_read: boolean;
   created_at: string;
   from_username?: string;
   from_display_name?: string;

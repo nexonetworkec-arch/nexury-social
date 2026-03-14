@@ -90,9 +90,9 @@ export const NotificationsList = () => {
       setNotifications(data);
       
       // Mark all as read
-      const unreadIds = data.filter((n: any) => n.read === 0).map((n: any) => n.id);
-      if (unreadIds.length > 0) {
-        await Promise.all(unreadIds.map(id => dataService.markNotificationAsRead(id)));
+      const hasUnread = data.some((n: any) => !n.is_read);
+      if (hasUnread) {
+        await dataService.markAllNotificationsAsRead(user.id);
         refreshCounts();
       }
     } catch (error) {
