@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, X, Minus, Maximize2, Send, Search, MoreVertical, Phone, Video, Trash2, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, X, Minus, Maximize2, Send, Search, MoreVertical, Phone, Video, Trash2, ShieldAlert, CheckCircle2, Eraser } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
@@ -17,6 +17,7 @@ import { useNotifications } from '../../context/NotificationContext';
 const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId, onClose }) => {
   const { user: currentUser } = useAuth();
   const { refreshCounts } = useNotifications();
+  const { refreshConversations } = useChat();
   const [targetUser, setTargetUser] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -108,6 +109,19 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
       setShowOptions(false);
     } catch (error) {
       console.error('Error clearing chat:', error);
+    }
+  };
+
+  const handleDeleteChat = async () => {
+    if (!currentUser || !conversationId) return;
+    if (!confirm('¿Estás seguro de que quieres eliminar esta conversación? Desaparecerá de tu lista y los mensajes se ocultarán solo para ti.')) return;
+
+    try {
+      await dataService.deleteConversation(conversationId, currentUser.id);
+      await refreshConversations();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting chat:', error);
     }
   };
 
@@ -238,14 +252,21 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
                 >
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleClearChat(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
                   >
-                    <Trash2 size={14} />
+                    <Eraser size={14} />
                     Vaciar chat
                   </button>
                   <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteChat(); }}
+                    className="w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar chat
+                  </button>
+                  <button 
                     onClick={(e) => { e.stopPropagation(); onClose(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100 mt-1 pt-2"
                   >
                     <X size={14} />
                     Cerrar chat
@@ -392,7 +413,7 @@ const ChatHistoryPanel: React.FC = () => {
 
     try {
       await dataService.deleteConversation(conversationId, currentUser.id);
-      refreshConversations();
+      await refreshConversations();
     } catch (error) {
       console.error('Error deleting conversation:', error);
     }

@@ -1461,7 +1461,7 @@ export const dataService = {
           // Limpiar el último mensaje si está oculto para el usuario
           let lastMessage = conv.last_message;
           if (lastMessage && lastMessage.includes(`[HIDDEN_FOR:${userId}]`)) {
-            lastMessage = 'Mensaje eliminado';
+            lastMessage = 'Chat vaciado';
           } else if (lastMessage && lastMessage.includes('[HIDDEN_FOR:')) {
             lastMessage = lastMessage.replace(/\[HIDDEN_FOR:[^\]]+\]/g, '');
           }
@@ -1577,23 +1577,41 @@ export const dataService = {
   },
 
   async clearChatForMe(conversationId: string, userId: string): Promise<boolean> {
-    // Ocultar todos los mensajes (enviados y recibidos) solo para este usuario
+    // 1. Ocultar todos los mensajes (enviados y recibidos) solo para este usuario
     const { data: messages } = await supabase
       .from('messages')
       .select('id, content')
       .eq('conversation_id', conversationId);
 
-    if (!messages) return true;
+    if (messages) {
+      const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
+      await Promise.all(messages.map(async (msg) => {
+        if (!msg.content.includes(hiddenPrefix)) {
+          return supabase
+            .from('messages')
+            .update({ content: hiddenPrefix + msg.content })
+            .eq('id', msg.id);
+        }
+      }));
+    }
 
-    const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
-    for (const msg of messages) {
-      if (!msg.content.includes(hiddenPrefix)) {
+    // 2. Ocultar también el último mensaje en la tabla de conversaciones
+    const { data: conv } = await supabase
+      .from('conversations')
+      .select('last_message')
+      .eq('id', conversationId)
+      .single();
+
+    if (conv && conv.last_message) {
+      const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
+      if (!conv.last_message.includes(hiddenPrefix)) {
         await supabase
-          .from('messages')
-          .update({ content: hiddenPrefix + msg.content })
-          .eq('id', msg.id);
+          .from('conversations')
+          .update({ last_message: hiddenPrefix + conv.last_message })
+          .eq('id', conversationId);
       }
     }
+
     return true;
   },
 
