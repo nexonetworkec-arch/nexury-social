@@ -1458,8 +1458,17 @@ export const dataService = {
             .eq('is_read', false)
             .neq('sender_id', userId);
 
+          // Limpiar el último mensaje si está oculto para el usuario
+          let lastMessage = conv.last_message;
+          if (lastMessage && lastMessage.includes(`[HIDDEN_FOR:${userId}]`)) {
+            lastMessage = 'Mensaje eliminado';
+          } else if (lastMessage && lastMessage.includes('[HIDDEN_FOR:')) {
+            lastMessage = lastMessage.replace(/\[HIDDEN_FOR:[^\]]+\]/g, '');
+          }
+
           return {
             ...conv,
+            last_message: lastMessage,
             unread_count: unreadCount || 0,
             participants: participants?.map((p: any) => p.user).filter(u => u.id !== userId) || []
           };
@@ -1484,6 +1493,8 @@ export const dataService = {
       .order('created_at', { ascending: true });
 
     if (error) throw error;
+    
+    // El filtrado por usuario se hace en el frontend o aquí si pasamos el userId
     return data || [];
   },
 
@@ -1528,6 +1539,89 @@ export const dataService = {
     }
 
     return data;
+  },
+
+  async deleteMessageForEveryone(messageId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('messages')
+      .update({ content: '🚫 Este mensaje fue eliminado', is_deleted_for_everyone: true })
+      .eq('id', messageId);
+
+    if (error) {
+      // Si la columna is_deleted_for_everyone no existe, intentamos borrarlo físicamente
+      const { error: deleteError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId);
+      if (deleteError) throw deleteError;
+    }
+    return true;
+  },
+
+  async deleteMessageForMe(messageId: string, userId: string): Promise<boolean> {
+    // Usamos un prefijo en el contenido para simular el borrado para un usuario específico
+    // sin necesidad de cambiar el esquema de la base de datos.
+    const { data: msg } = await supabase.from('messages').select('content').eq('id', messageId).single();
+    if (!msg) return false;
+
+    const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
+    if (msg.content.includes(hiddenPrefix)) return true;
+
+    const { error } = await supabase
+      .from('messages')
+      .update({ content: hiddenPrefix + msg.content })
+      .eq('id', messageId);
+
+    if (error) throw error;
+    return true;
+  },
+
+  async clearChatForMe(conversationId: string, userId: string): Promise<boolean> {
+    // Ocultar todos los mensajes (enviados y recibidos) solo para este usuario
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('id, content')
+      .eq('conversation_id', conversationId);
+
+    if (!messages) return true;
+
+    const hiddenPrefix = `[HIDDEN_FOR:${userId}]`;
+    for (const msg of messages) {
+      if (!msg.content.includes(hiddenPrefix)) {
+        await supabase
+          .from('messages')
+          .update({ content: hiddenPrefix + msg.content })
+          .eq('id', msg.id);
+      }
+    }
+    return true;
+  },
+
+  async deleteConversation(conversationId: string, userId: string): Promise<boolean> {
+    // Primero ocultamos todos los mensajes para el usuario
+    await this.clearChatForMe(conversationId, userId);
+    
+    // Luego eliminamos al participante para que no aparezca en la lista de chats
+    const { error: pError } = await supabase
+      .from('conversation_participants')
+      .delete()
+      .eq('conversation_id', conversationId)
+      .eq('user_id', userId);
+
+    if (pError) throw pError;
+
+    // Si no quedan participantes, limpiamos la base de datos
+    const { count } = await supabase
+      .from('conversation_participants')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId);
+
+    if (count === 0) {
+      await supabase.from('messages').delete().eq('conversation_id', conversationId);
+      await supabase.from('conversations').delete().eq('id', conversationId);
+    }
+
+    return true;
   },
 
   async getOrCreateConversation(user1Id: string, user2Id: string): Promise<string> {
