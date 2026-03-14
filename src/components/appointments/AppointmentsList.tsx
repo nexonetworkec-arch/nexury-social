@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Clock, Check, X, Info, User } from 'lucide-react';
-import { dataService } from '../../services/dataService';
+import { AppointmentService } from '../../services/appointmentService';
 import { useAuth } from '../../context/AuthContext';
 import { Appointment } from '../../types';
 import { format } from 'date-fns';
@@ -23,7 +23,7 @@ export const AppointmentsList = () => {
 
   const loadAppointments = async () => {
     try {
-      const data = await dataService.getAppointments(user!.id);
+      const data = await AppointmentService.getAppointments(user!.id);
       setAppointments(data);
     } catch (error) {
       console.error('Error loading appointments', error);
@@ -34,7 +34,7 @@ export const AppointmentsList = () => {
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
-      await dataService.updateAppointmentStatus(id, status);
+      await AppointmentService.updateAppointmentStatus(id, status);
       loadAppointments();
     } catch (error) {
       console.error('Error updating appointment status', error);

@@ -9,7 +9,7 @@ import { UserStatus } from '../ui/UserStatus';
 import { cn } from '../../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { dataService } from '../../services/dataService';
+import { ChatService } from '../../services/chatService';
 import { supabase } from '../../lib/supabase';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -59,15 +59,15 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
         setTargetUser(profile);
 
         // 2. Get or create conversation
-        const convId = await dataService.getOrCreateConversation(currentUser.id, userId);
+        const convId = await ChatService.getOrCreateConversation(currentUser.id, userId);
         setConversationId(convId);
 
         // 3. Fetch initial messages
-        const data = await dataService.getMessages(convId);
+        const data = await ChatService.getMessages(convId);
         setMessages(data);
 
         // 4. Mark messages as read
-        await dataService.markMessagesAsRead(convId, currentUser.id);
+        await ChatService.markMessagesAsRead(convId, currentUser.id);
         refreshCounts();
       } catch (error) {
         console.error('Error initializing chat window:', error);
@@ -84,16 +84,16 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
     try {
       if (everyone) {
         setMessages(prev => prev.map(m => m.id === messageId ? { ...m, content: '🚫 Este mensaje fue eliminado' } : m));
-        await dataService.deleteMessageForEveryone(messageId);
+        await ChatService.deleteMessageForEveryone(messageId);
       } else {
         setMessages(prev => prev.filter(m => m.id !== messageId));
-        await dataService.deleteMessageForMe(messageId, currentUser.id);
+        await ChatService.deleteMessageForMe(messageId, currentUser.id);
       }
       setSelectedMessageId(null);
     } catch (error) {
       console.error('Error deleting message:', error);
       if (conversationId) {
-        const data = await dataService.getMessages(conversationId);
+        const data = await ChatService.getMessages(conversationId);
         setMessages(data);
       }
     }
@@ -105,7 +105,7 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
     
     try {
       setMessages([]);
-      await dataService.clearChatForMe(conversationId, currentUser.id);
+      await ChatService.clearChatForMe(conversationId, currentUser.id);
       setShowOptions(false);
     } catch (error) {
       console.error('Error clearing chat:', error);
@@ -117,7 +117,7 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
     if (!confirm('¿Estás seguro de que quieres eliminar esta conversación? Desaparecerá de tu lista y los mensajes se ocultarán solo para ti.')) return;
 
     try {
-      await dataService.deleteConversation(conversationId, currentUser.id);
+      await ChatService.deleteConversation(conversationId, currentUser.id);
       await refreshConversations();
       onClose();
     } catch (error) {
@@ -144,7 +144,7 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
 
           // Mark as read if it's from the other user
           if (payload.new.sender_id !== currentUser?.id) {
-            await dataService.markMessagesAsRead(conversationId, currentUser?.id || '');
+            await ChatService.markMessagesAsRead(conversationId, currentUser?.id || '');
             refreshCounts();
           }
         } else if (payload.eventType === 'UPDATE') {
@@ -179,13 +179,13 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
       // If conversationId is missing, try to get/create it now
       if (!currentConvId) {
         setLoading(true);
-        currentConvId = await dataService.getOrCreateConversation(currentUser.id, userId);
+        currentConvId = await ChatService.getOrCreateConversation(currentUser.id, userId);
         setConversationId(currentConvId);
         setLoading(false);
       }
 
       if (currentConvId) {
-        await dataService.sendMessage(currentConvId, currentUser.id, content);
+        await ChatService.sendMessage(currentConvId, currentUser.id, content);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -412,7 +412,7 @@ const ChatHistoryPanel: React.FC = () => {
     if (!confirm('¿Estás seguro de que quieres eliminar esta conversación? Los mensajes desaparecerán solo para ti, pero la otra persona conservará su copia.')) return;
 
     try {
-      await dataService.deleteConversation(conversationId, currentUser.id);
+      await ChatService.deleteConversation(conversationId, currentUser.id);
       await refreshConversations();
     } catch (error) {
       console.error('Error deleting conversation:', error);

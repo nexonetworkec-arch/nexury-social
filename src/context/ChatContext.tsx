@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
-import { dataService } from '../services/dataService';
+import { ChatService } from '../services/chatService';
+import { ErrorHandler, ErrorType } from '../utils/errorHandler';
 
 interface ChatConversation {
   id: string;
@@ -40,7 +41,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await dataService.getConversations(user.id);
+      const data = await ChatService.getConversations(user.id);
       
       const formattedConvs: ChatConversation[] = data.map((conv: any) => {
         const otherUser = conv.participants[0];
@@ -59,7 +60,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
       setConversations(formattedConvs);
     } catch (err) {
-      console.error('Error fetching conversations:', err);
+      ErrorHandler.handle(err, ErrorType.DATABASE);
     } finally {
       setLoading(false);
     }

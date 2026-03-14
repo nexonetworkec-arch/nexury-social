@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Video, Users, Play, Plus, Info, Trash2, History } from 'lucide-react';
-import { dataService } from '../../services/dataService';
+import { LiveService } from '../../services/liveService';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { LiveStream as LiveStreamType } from '../../types';
@@ -22,8 +22,8 @@ export const LiveView: React.FC = () => {
     const fetchStreams = async () => {
       try {
         const [activeData, pastData] = await Promise.all([
-          dataService.getActiveLiveStreams(),
-          dataService.getPastLiveStreams()
+          LiveService.getActiveLiveStreams(),
+          LiveService.getPastLiveStreams()
         ]);
         setStreams(activeData);
         setPastStreams(pastData);
@@ -41,7 +41,7 @@ export const LiveView: React.FC = () => {
     e.stopPropagation();
     
     try {
-      await dataService.deleteLiveStream(streamId, user?.id || '');
+      await LiveService.deleteLiveStream(streamId, user?.id || '');
       setPastStreams(prev => prev.filter(s => s.id !== streamId));
       setStreams(prev => prev.filter(s => s.id !== streamId));
     } catch (err) {

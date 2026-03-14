@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Camera, User, FileText, Save, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
 import { Button } from '../ui/Button';
 
 interface EditProfileModalProps {
@@ -56,18 +56,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       // Si hay un archivo nuevo, subirlo primero
       if (avatarFile) {
         try {
-          finalAvatarUrl = await dataService.uploadMedia(user.id, avatarFile, 'avatars');
+          finalAvatarUrl = await AuthService.uploadMedia(avatarFile, 'avatars');
         } catch (uploadErr) {
           console.error('Error uploading avatar:', uploadErr);
           throw new Error('Error al subir la imagen. Intenta con un archivo más pequeño.');
         }
       }
 
-      await dataService.updateUser(user.id, {
-        displayName,
+      await AuthService.updateProfile(user.id, {
+        display_name: displayName,
         username,
         bio,
-        avatarUrl: finalAvatarUrl
+        avatar_url: finalAvatarUrl
       });
 
       // Forzar una actualización completa del estado global

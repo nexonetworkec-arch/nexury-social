@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Heart, MessageCircle, UserPlus, Star, Ghost, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { dataService } from '../../services/dataService';
+import { NotificationService } from '../../services/notificationService';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { formatTime } from '../../lib/utils';
@@ -86,13 +86,13 @@ export const NotificationsList = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await dataService.getNotifications(user.id);
+      const data = await NotificationService.getNotifications(user.id);
       setNotifications(data);
       
       // Mark all as read
       const hasUnread = data.some((n: any) => !n.is_read);
       if (hasUnread) {
-        await dataService.markAllNotificationsAsRead(user.id);
+        await NotificationService.markAllAsRead(user.id);
         refreshCounts();
       }
     } catch (error) {
@@ -109,7 +109,7 @@ export const NotificationsList = () => {
   const handleDeleteNotification = async (id: string) => {
     try {
       setNotifications(prev => prev.filter(n => n.id !== id));
-      await dataService.deleteNotification(id);
+      await NotificationService.deleteNotification(id);
       refreshCounts();
     } catch (error) {
       console.error('Error deleting notification', error);
@@ -125,7 +125,7 @@ export const NotificationsList = () => {
     setIsClearing(true);
     try {
       setNotifications([]);
-      await dataService.clearAllNotifications(user.id);
+      await NotificationService.clearAll(user.id);
       refreshCounts();
     } catch (error) {
       console.error('Error clearing notifications', error);

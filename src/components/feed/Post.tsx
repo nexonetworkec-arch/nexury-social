@@ -8,7 +8,8 @@ import { formatTime, cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
-import { dataService } from '../../services/dataService';
+import { SocialService } from '../../services/socialService';
+import { AdminService } from '../../services/adminService';
 import { Button } from '../ui/Button';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { EditPostModal } from './EditPostModal';
@@ -48,7 +49,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
   React.useEffect(() => {
     const checkBookmark = async () => {
       if (user && (initialPost as any).user_has_bookmarked === undefined) {
-        const isBookmarked = await dataService.checkIfBookmarked(post.id, user.id);
+        const isBookmarked = await SocialService.checkIfBookmarked(post.id, user.id);
         setBookmarked(isBookmarked);
       }
     };
@@ -58,7 +59,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
   // Check if appointments benefit is active
   React.useEffect(() => {
     const checkBenefit = async () => {
-      const active = await dataService.isBenefitActive('appointments');
+      const active = await AdminService.isBenefitActive('appointments');
       setIsAppointmentsEnabled(active);
     };
     checkBenefit();
@@ -69,7 +70,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     if (!user || !post.id) return;
 
     const timer = setTimeout(async () => {
-      const isNewView = await dataService.incrementPostViews(post.id, user.id);
+      const isNewView = await SocialService.incrementPostViews(post.id, user.id);
       if (isNewView) {
         setViewsCount(prev => prev + 1);
       }
@@ -134,16 +135,13 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     setIsDeleting(true);
     try {
       const isAdmin = !!(user.is_admin || user.is_super_admin);
-      await dataService.deletePost(post.id, user.id, isAdmin);
+      await SocialService.deletePost(post.id, user.id, isAdmin);
       setIsHidden(true);
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Error deleting post', error);
       setIsDeleting(false);
       setShowDeleteConfirm(false);
-      // Intentar ocultarlo de todos modos si el error es de permisos pero queremos que el usuario vea que "se fue"
-      // (aunque reaparecerá al recargar si el servidor realmente lo bloqueó)
-      // setIsHidden(true); 
     }
   };
 
@@ -155,7 +153,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     if (!reason) return;
 
     try {
-      await dataService.reportPost(post.id, user.id, reason);
+      await SocialService.reportPost(post.id, user.id, reason);
       alert('Gracias por tu reporte. Lo revisaremos pronto.');
     } catch (error) {
       console.error('Error reporting post', error);
@@ -185,7 +183,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     setLikesCount(prev => liked ? prev - 1 : prev + 1);
     
     try {
-      const result = await dataService.likePost(post.id, user.id, liked);
+      const result = await SocialService.likePost(post.id, user.id, liked);
       // Sincronizar con la respuesta real si es necesario
       if (result.action === 'unliked') {
         setLiked(false);
@@ -208,7 +206,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     setBookmarked(!bookmarked);
 
     try {
-      const result = await dataService.toggleBookmark(post.id, user.id);
+      const result = await SocialService.toggleBookmark(post.id, user.id);
       if (result.action === 'removed') {
         setBookmarked(false);
       } else if (result.action === 'added') {
@@ -224,7 +222,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     e.stopPropagation();
     if (!showComments) {
       try {
-        const data = await dataService.getComments(post.id);
+        const data = await SocialService.getComments(post.id);
         setComments(data);
       } catch (error) {
         console.error('Error fetching comments', error);
@@ -258,7 +256,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     
     setIsSubmitting(true);
     try {
-      const comment = await dataService.createComment(post.id, user.id, commentText);
+      const comment = await SocialService.createComment(post.id, user.id, commentText);
       // Replace optimistic comment with real one
       setComments(prev => prev.map(c => c.id === tempId ? comment : c));
     } catch (error) {

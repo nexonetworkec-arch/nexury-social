@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bookmark, Ghost } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Button } from '../ui/Button';
-import { dataService } from '../../services/dataService';
+import { SocialService } from '../../services/socialService';
 import { useAuth } from '../../context/AuthContext';
 import { Post as FeedPost } from '../feed/Post';
 import { Post as PostType } from '../../types';
@@ -19,7 +19,7 @@ export const BookmarksList = () => {
       if (!user) return;
       setLoading(true);
       try {
-        const data = await dataService.getBookmarks(user.id);
+        const data = await SocialService.getBookmarks(user.id);
         setBookmarks(data);
       } catch (error) {
         console.error('Error fetching bookmarks', error);

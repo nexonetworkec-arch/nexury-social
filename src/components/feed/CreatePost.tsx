@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Image, Smile, Calendar, MapPin, X, Film, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
+import { SocialService } from '../../services/socialService';
 import { Button } from '../ui/Button';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { cn } from '../../lib/utils';
@@ -41,10 +42,10 @@ export const CreatePost = ({ onPostCreated }: { onPostCreated: (post: any) => vo
 
       // Si hay un archivo, subirlo primero
       if (mediaFile) {
-        finalMediaUrl = await dataService.uploadMedia(user.id, mediaFile, 'posts');
+        finalMediaUrl = await AuthService.uploadMedia(mediaFile, 'posts');
       }
 
-      const newPost = await dataService.createPost(user.id, content, finalMediaUrl, mediaType, showAppointmentButton);
+      const newPost = await SocialService.createPost(user.id, content, finalMediaUrl, mediaType, showAppointmentButton);
       
       // Resetear estado ANTES de llamar al callback para asegurar que el UI se actualice
       setContent('');

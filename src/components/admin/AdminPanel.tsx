@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Users, FileText, BarChart3, Shield, Trash2, UserX, AlertTriangle, Lock, Unlock, Heart, Calendar, MessageCircle, Settings, Megaphone, Zap, ShieldOff, Eye, MousePointer2, ExternalLink, Plus, RefreshCw, Image, Upload } from 'lucide-react';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
+import { AdminService } from '../../services/adminService';
+import { SocialService } from '../../services/socialService';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { formatTime, cn } from '../../lib/utils';
@@ -74,16 +76,16 @@ export const AdminPanel = () => {
       setLoading(true);
       try {
         if (activeTab === 'stats') {
-          const data = await dataService.getAdminStats();
+          const data = await AdminService.getAdminStats();
           setStats(data);
         } else if (activeTab === 'users') {
-          const data = await dataService.getAdminUsers();
+          const data = await AdminService.getAdminUsers();
           setUsers(data);
         } else if (activeTab === 'posts') {
-          const data = await dataService.getAdminPosts();
+          const data = await AdminService.getAdminPosts();
           setPosts(data);
         } else if (activeTab === 'ads') {
-          const data = await dataService.getAds();
+          const data = await AdminService.getAds();
           setAds(data);
         }
       } catch (error) {
@@ -106,7 +108,7 @@ export const AdminPanel = () => {
 
   const handleToggleAd = async (id: string, currentStatus: boolean) => {
     try {
-      await dataService.updateAd(id, { is_active: !currentStatus });
+      await AdminService.updateAd(id, { is_active: !currentStatus });
       setAds(prev => prev.map(a => a.id === id ? { ...a, is_active: !currentStatus } : a));
     } catch (error) {
       console.error('Error toggling ad:', error);
@@ -125,10 +127,10 @@ export const AdminPanel = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await dataService.createAd(newAd);
+      await AdminService.createAd(newAd);
       setIsAddingAd(false);
       setNewAd({ title: '', description: '', image_url: '', target_url: '' });
-      const data = await dataService.getAds();
+      const data = await AdminService.getAds();
       setAds(data);
     } catch (error) {
       console.error('Error creating ad:', error);
@@ -144,7 +146,7 @@ export const AdminPanel = () => {
 
     setIsUploadingAdImage(true);
     try {
-      const url = await dataService.uploadMedia(currentUser.id, file, 'posts');
+      const url = await AuthService.uploadMedia(file, 'posts');
       setNewAd(prev => ({ ...prev, image_url: url }));
     } catch (error: any) {
       console.error('Error uploading ad image:', error);
@@ -156,7 +158,7 @@ export const AdminPanel = () => {
 
   const handleToggleVerify = async (userId: string, currentStatus: boolean) => {
     try {
-      const updatedUser = await dataService.verifyUser(userId, !currentStatus);
+      const updatedUser = await AdminService.verifyUser(userId, !currentStatus);
       setUsers(users.map(u => u.id === userId ? { ...u, is_verified: updatedUser.is_verified } : u));
     } catch (error) {
       console.error('Error toggling verification', error);
@@ -171,21 +173,21 @@ export const AdminPanel = () => {
 
       // 2. Ejecutar la acción solicitada
       if (confirmModal.action === 'delete-user') {
-        await dataService.deleteUser(confirmModal.targetId);
+        await AdminService.deleteUser(confirmModal.targetId);
         setUsers(users.filter(u => u.id !== confirmModal.targetId));
         alert('Usuario eliminado correctamente');
       } else if (confirmModal.action === 'block-user' || confirmModal.action === 'unblock-user') {
         const isBlocked = confirmModal.action === 'block-user';
-        const updatedUser = await dataService.blockUser(confirmModal.targetId, isBlocked);
+        const updatedUser = await AdminService.blockUser(confirmModal.targetId, isBlocked);
         setUsers(users.map(u => u.id === confirmModal.targetId ? { ...u, is_blocked: updatedUser.is_blocked } : u));
         alert(isBlocked ? 'Usuario bloqueado' : 'Usuario desbloqueado');
       } else if (confirmModal.action === 'delete-post') {
         if (!currentUser) return;
-        await dataService.deletePost(confirmModal.targetId, currentUser.id, true);
+        await SocialService.deletePost(confirmModal.targetId, currentUser.id, true);
         setPosts(posts.filter(p => p.id !== confirmModal.targetId));
         alert('Publicación eliminada correctamente');
       } else if (confirmModal.action === 'delete-ad') {
-        await dataService.deleteAd(confirmModal.targetId);
+        await AdminService.deleteAd(confirmModal.targetId);
         setAds(prev => prev.filter(a => a.id !== confirmModal.targetId));
         alert('Anuncio eliminado correctamente');
       }

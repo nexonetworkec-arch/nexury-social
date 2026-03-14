@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Star, Award, Headphones, Video, ShieldOff, Palette, Settings, BarChart2, MessageSquare, Shield, ShieldAlert, Heart, Calendar, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
+import { SocialService } from '../../services/socialService';
+import { AdminService } from '../../services/adminService';
 import { pushNotificationService } from '../../services/pushNotificationService';
 import { SEO } from '../common/SEO';
 import { Post as PostType, VerifiedBenefit } from '../../types';
@@ -53,7 +55,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   const handleToggleVerify = async () => {
     if (!currentUser || !profileUser) return;
     try {
-      await dataService.verifyUser(profileUser.id, !profileUser.is_verified);
+      await AdminService.verifyUser(profileUser.id, !profileUser.is_verified);
       setProfileUser({ ...profileUser, is_verified: !profileUser.is_verified });
       setIsAdminMenuOpen(false);
     } catch (error) {
@@ -64,7 +66,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
   const handleBlockUser = async () => {
     if (!currentUser || !profileUser) return;
     try {
-      await dataService.blockUser(profileUser.id, !profileUser.is_blocked);
+      await AdminService.blockUser(profileUser.id, !profileUser.is_blocked);
       setProfileUser({ ...profileUser, is_blocked: !profileUser.is_blocked });
       setIsAdminMenuOpen(false);
     } catch (error) {
@@ -77,7 +79,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     const reason = window.prompt('¿Por qué deseas reportar a este usuario?');
     if (!reason) return;
     try {
-      await dataService.reportUser(profileUser.id, currentUser.id, reason);
+      await AdminService.reportUser(profileUser.id, currentUser.id, reason);
       alert('Gracias por tu reporte. Lo revisaremos pronto.');
       setIsUserMenuOpen(false);
       setIsAdminMenuOpen(false);
@@ -90,7 +92,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     if (!currentUser || !profileUser) return;
     if (!window.confirm('¿Estás seguro de bloquear a este usuario? No verás sus publicaciones ni podrá contactarte.')) return;
     try {
-      await dataService.blockUserPersonal(currentUser.id, profileUser.id);
+      await SocialService.blockUser(currentUser.id, profileUser.id);
       alert('Usuario bloqueado.');
       setIsUserMenuOpen(false);
       setIsAdminMenuOpen(false);
@@ -103,7 +105,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     if (!currentUser || !profileUser) return;
     if (!window.confirm('¿Estás seguro de eliminar permanentemente este usuario? Esta acción no se puede deshacer.')) return;
     try {
-      await dataService.deleteUser(profileUser.id);
+      await AdminService.deleteUser(profileUser.id);
       window.dispatchEvent(new CustomEvent('changeView', { detail: 'Home' }));
     } catch (error) {
       console.error('Error deleting user', error);
@@ -116,27 +118,27 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
       setLoading(true);
       try {
         const [userData, userStats] = await Promise.all([
-          dataService.getUserProfile(targetId),
-          dataService.getUserCounts(targetId)
+          AuthService.getProfile(targetId),
+          AuthService.getUserCounts(targetId)
         ]);
         
         setProfileUser(userData);
         setStats(userStats);
-
+  
         if (!isOwnProfile && currentUser && targetId) {
-          dataService.recordUniqueView(currentUser.id, targetId, 'profile');
+          SocialService.recordProfileView(currentUser.id, targetId);
         }
-
+  
         if (!isOwnProfile && currentUser) {
-          const isFollowing = await dataService.checkIfFollowing(currentUser.id, targetId);
+          const isFollowing = await SocialService.checkIfFollowing(currentUser.id, targetId);
           setFollowing(isFollowing);
         }
-
-        const userPosts = await dataService.getUserPosts(targetId, currentUser?.id);
+  
+        const userPosts = await SocialService.getUserPosts(targetId, currentUser?.id);
         setPosts(userPosts);
-
+  
         if (userData.is_verified) {
-          const allBenefits = await dataService.getVerifiedBenefits();
+          const allBenefits = await AdminService.getVerifiedBenefits();
           setBenefits(allBenefits.filter(b => b.is_active));
         }
 
@@ -238,7 +240,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     }));
 
     try {
-      await dataService.followUser(currentUser.id, targetId, following);
+      await SocialService.followUser(currentUser.id, targetId, following);
       await refreshUser();
     } catch (error) {
       console.error('Error following user', error);
@@ -266,7 +268,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     if (!currentUser || isRequestingVerification) return;
     setIsRequestingVerification(true);
     try {
-      await dataService.requestVerification(currentUser.id);
+      await AdminService.requestVerification(currentUser.id);
       alert('Tu solicitud de verificación ha sido enviada con éxito. Los administradores la revisarán pronto.');
       setIsSettingsOpen(false);
     } catch (error) {

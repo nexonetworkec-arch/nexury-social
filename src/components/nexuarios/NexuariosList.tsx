@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Users, Search, UserPlus, UserCheck, MessageSquare, ExternalLink } from 'lucide-react';
-import { dataService } from '../../services/dataService';
+import { SocialService } from '../../services/socialService';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { Button } from '../ui/Button';
@@ -24,7 +24,7 @@ export const NexuariosList = ({ initialSearchQuery = '' }: { initialSearchQuery?
     const fetchNexuarios = async () => {
       setLoading(true);
       try {
-        const data = await dataService.getNexuarios();
+        const data = await SocialService.getNexuarios();
         setNexuarios(data);
         
         // Si hay usuario logueado, ver a quién sigue

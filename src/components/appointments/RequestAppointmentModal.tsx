@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Clock, Send, Info } from 'lucide-react';
-import { dataService } from '../../services/dataService';
+import { AppointmentService } from '../../services/appointmentService';
 import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
 
@@ -27,7 +27,7 @@ export const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = (
     setLoading(true);
     try {
       const appointmentDate = `${date}T${time}:00`;
-      await dataService.createAppointment({
+      await AppointmentService.createAppointment({
         requesterId: user.id,
         receiverId: targetUser.id,
         title,

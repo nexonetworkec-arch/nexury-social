@@ -341,8 +341,6 @@ DECLARE
     v_display_name TEXT;
     v_avatar_url TEXT;
 BEGIN
-    SET search_path = public;
-    
     -- Extract metadata with fallbacks
     v_display_name := COALESCE(NULLIF(NEW.raw_user_meta_data->>'display_name', ''), NEW.raw_user_meta_data->>'full_name', 'Usuario');
     v_avatar_url := COALESCE(NULLIF(NEW.raw_user_meta_data->>'avatar_url', ''), 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || NEW.id);
@@ -350,15 +348,27 @@ BEGIN
     -- Generate username from email or metadata
     v_username := LOWER(COALESCE(
         NULLIF(NEW.raw_user_meta_data->>'username', ''),
-        SPLIT_PART(NEW.email, '@', 1) || '_' || SUBSTR(NEW.id::text, 1, 4)
+        SPLIT_PART(NEW.email, '@', 1)
     ));
+
+    -- Ensure username is at least 3 characters and unique-ish
+    IF char_length(v_username) < 3 THEN
+        v_username := v_username || SUBSTR(NEW.id::text, 1, 4);
+    ELSE
+        -- Add suffix to avoid conflicts with existing usernames
+        v_username := v_username || '_' || SUBSTR(NEW.id::text, 1, 4);
+    END IF;
 
     INSERT INTO public.profiles (id, email, username, display_name, avatar_url)
     VALUES (NEW.id, NEW.email, v_username, v_display_name, v_avatar_url)
-    ON CONFLICT (id) DO NOTHING;
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        display_name = COALESCE(profiles.display_name, EXCLUDED.display_name),
+        avatar_url = COALESCE(profiles.avatar_url, EXCLUDED.avatar_url);
 
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
+    -- Log error if possible or just return NEW to not block auth signup
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -5,7 +5,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useAuth } from '../../context/AuthContext';
 import { AccessDenied } from '../common/AccessDenied';
 import { ConfirmPasswordModal } from '../common/ConfirmPasswordModal';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
+import { AdminService } from '../../services/adminService';
 import { Button } from '../ui/Button';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { cn } from '../../lib/utils';
@@ -94,7 +95,7 @@ export const SuperAdminPanel = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const settings = await dataService.getGlobalSettings();
+      const settings = await AdminService.getGlobalSettings();
       setGlobalSettings({
         maintenanceMode: settings.maintenance_mode,
         registrationsOpen: settings.registrations_open,
@@ -114,7 +115,7 @@ export const SuperAdminPanel = () => {
   const handleSaveSettings = async () => {
     setLoading(true);
     try {
-      await dataService.updateGlobalSettings({
+      await AdminService.updateGlobalSettings({
         maintenance_mode: globalSettings.maintenanceMode,
         registrations_open: globalSettings.registrationsOpen,
         email_notifications: globalSettings.emailNotifications,
@@ -135,7 +136,7 @@ export const SuperAdminPanel = () => {
   const handleOptimizeTable = async (tableName: string) => {
     setOptimizing(tableName);
     try {
-      const result = await dataService.optimizeTable(tableName);
+      const result = await AdminService.optimizeTable(tableName);
       alert(result.message);
       fetchDbStats();
     } catch (error) {
@@ -149,7 +150,7 @@ export const SuperAdminPanel = () => {
     setLoading(true);
     try {
       // En una app real, esto vendría de una función RPC o API
-      const stats = await dataService.getAdminStats();
+      const stats = await AdminService.getAdminStats();
       setDbStats({
         tables: [
           { name: 'profiles', count: stats.users, size: '1.2 MB' },
@@ -174,7 +175,7 @@ export const SuperAdminPanel = () => {
     setLoading(true);
     try {
       // Mocking system health
-      const logs = await dataService.getServerLogs();
+      const logs = await AdminService.getServerLogs();
       setServerLogs(logs);
       
       setTimeout(() => {
@@ -221,7 +222,7 @@ export const SuperAdminPanel = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const data = await dataService.getAdminUsers();
+      const data = await AdminService.getAdminUsers();
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -245,7 +246,7 @@ export const SuperAdminPanel = () => {
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const data = await dataService.getAdministrators();
+      const data = await AdminService.getAdministrators();
       setAdmins(data);
     } catch (error) {
       console.error('Error fetching admins:', error);
@@ -257,7 +258,7 @@ export const SuperAdminPanel = () => {
   const fetchBenefits = async () => {
     setLoading(true);
     try {
-      const data = await dataService.getVerifiedBenefits();
+      const data = await AdminService.getVerifiedBenefits();
       setBenefits(data);
     } catch (error) {
       console.error('Error fetching benefits:', error);
@@ -269,7 +270,7 @@ export const SuperAdminPanel = () => {
   const fetchAds = async () => {
     setLoading(true);
     try {
-      const data = await dataService.getAds();
+      const data = await AdminService.getAds();
       setAds(data);
     } catch (error) {
       console.error('Error fetching ads:', error);
@@ -282,7 +283,7 @@ export const SuperAdminPanel = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await dataService.createAd(newAd);
+      await AdminService.createAd(newAd);
       setIsAddingAd(false);
       setNewAd({ title: '', description: '', image_url: '', target_url: '' });
       fetchAds();
@@ -300,7 +301,7 @@ export const SuperAdminPanel = () => {
 
     setIsUploadingAdImage(true);
     try {
-      const url = await dataService.uploadMedia(user.id, file, 'posts'); // Usamos el bucket de posts o creamos uno de ads
+      const url = await AuthService.uploadMedia(file, 'posts'); // Usamos el bucket de posts o creamos uno de ads
       setNewAd(prev => ({ ...prev, image_url: url }));
     } catch (error: any) {
       console.error('Error uploading ad image:', error);
@@ -312,7 +313,7 @@ export const SuperAdminPanel = () => {
 
   const handleToggleAd = async (id: string, currentStatus: boolean) => {
     try {
-      await dataService.updateAd(id, { is_active: !currentStatus });
+      await AdminService.updateAd(id, { is_active: !currentStatus });
       setAds(prev => prev.map(a => a.id === id ? { ...a, is_active: !currentStatus } : a));
     } catch (error) {
       console.error('Error toggling ad:', error);
@@ -331,7 +332,7 @@ export const SuperAdminPanel = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await dataService.createVerifiedBenefit(newBenefit);
+      await AdminService.createVerifiedBenefit(newBenefit);
       setIsAddingBenefit(false);
       setNewBenefit({ slug: '', name: '', description: '', icon_name: 'Star' });
       fetchBenefits();
@@ -345,7 +346,7 @@ export const SuperAdminPanel = () => {
 
   const handleToggleBenefit = async (id: string, currentStatus: boolean) => {
     try {
-      await dataService.updateVerifiedBenefit(id, { is_active: !currentStatus });
+      await AdminService.updateVerifiedBenefit(id, { is_active: !currentStatus });
       setBenefits(prev => prev.map(b => b.id === id ? { ...b, is_active: !currentStatus } : b));
     } catch (error) {
       console.error('Error toggling benefit:', error);
@@ -363,7 +364,7 @@ export const SuperAdminPanel = () => {
   const handleSearchUsers = async () => {
     setLoading(true);
     try {
-      const data = await dataService.searchUsers(searchQuery);
+      const data = await AuthService.searchProfiles(searchQuery);
       setSearchResults(data);
     } catch (error) {
       console.error('Error searching users:', error);
@@ -374,7 +375,7 @@ export const SuperAdminPanel = () => {
 
   const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
     try {
-      await dataService.setAdminStatus(userId, !currentStatus);
+      await AdminService.setAdminStatus(userId, !currentStatus);
       if (currentSubView === 'admins') {
         fetchAdmins();
       } else if (currentSubView === 'users') {
@@ -389,7 +390,7 @@ export const SuperAdminPanel = () => {
 
   const handleToggleVerify = async (userId: string, currentStatus: boolean) => {
     try {
-      await dataService.verifyUser(userId, !currentStatus);
+      await AdminService.verifyUser(userId, !currentStatus);
       if (currentSubView === 'users') {
         fetchUsers();
       }
@@ -400,7 +401,7 @@ export const SuperAdminPanel = () => {
 
   const handleToggleBlock = async (userId: string, currentStatus: boolean) => {
     try {
-      await dataService.blockUser(userId, !currentStatus);
+      await AdminService.blockUser(userId, !currentStatus);
       if (currentSubView === 'users') {
         fetchUsers();
       }
@@ -436,7 +437,7 @@ export const SuperAdminPanel = () => {
     };
 
     try {
-      await dataService.updateAdminPermissions(userId, newPermissions);
+      await AdminService.updateAdminPermissions(userId, newPermissions);
       setAdmins(prev => prev.map(a => a.id === userId ? { ...a, permissions: newPermissions } : a));
     } catch (error) {
       console.error('Error updating permissions:', error);
@@ -450,20 +451,20 @@ export const SuperAdminPanel = () => {
 
       // 2. Ejecutar la acción solicitada
       if (confirmModal.action === 'delete-user') {
-        await dataService.deleteUser(confirmModal.targetId);
+        await AdminService.deleteUser(confirmModal.targetId);
         if (currentSubView === 'users') fetchUsers();
         alert('Usuario eliminado correctamente');
       } else if (confirmModal.action === 'delete-benefit') {
-        await dataService.deleteVerifiedBenefit(confirmModal.targetId);
+        await AdminService.deleteVerifiedBenefit(confirmModal.targetId);
         setBenefits(prev => prev.filter(b => b.id !== confirmModal.targetId));
         alert('Beneficio eliminado correctamente');
       } else if (confirmModal.action === 'delete-ad') {
-        await dataService.deleteAd(confirmModal.targetId);
+        await AdminService.deleteAd(confirmModal.targetId);
         setAds(prev => prev.filter(a => a.id !== confirmModal.targetId));
         alert('Anuncio eliminado correctamente');
       } else if (confirmModal.action === 'block-user' || confirmModal.action === 'unblock-user') {
         const isBlocked = confirmModal.action === 'block-user';
-        await dataService.blockUser(confirmModal.targetId, isBlocked);
+        await AdminService.blockUser(confirmModal.targetId, isBlocked);
         if (currentSubView === 'users') fetchUsers();
         alert(isBlocked ? 'Usuario bloqueado' : 'Usuario desbloqueado');
       } else if (confirmModal.action === 'reset-platform') {
@@ -477,7 +478,7 @@ export const SuperAdminPanel = () => {
         const newMode = confirmModal.data.newMode;
         setLoading(true);
         try {
-          await dataService.updateGlobalSettings({
+          await AdminService.updateGlobalSettings({
             ...globalSettings,
             maintenance_mode: newMode
           });

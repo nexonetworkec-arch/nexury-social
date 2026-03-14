@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng';
 import { X, Users, Mic, MicOff, Video, VideoOff, Send, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { dataService } from '../../services/dataService';
+import { LiveService } from '../../services/liveService';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { motion, AnimatePresence } from 'motion/react';
@@ -55,7 +55,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
     // Cargar mensajes iniciales
     const loadMessages = async () => {
-      const initialMessages = await dataService.getLiveMessages(streamId);
+      const initialMessages = await LiveService.getLiveMessages(streamId);
       setMessages(initialMessages);
     };
     loadMessages();
@@ -128,7 +128,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
             }
 
             // Registrar en DB
-            const stream = await dataService.startLiveStream(user!.id, streamTitle);
+            const stream = await LiveService.startLiveStream(user!.id, streamTitle);
             setStreamId(stream.id);
           } catch (err: any) {
             console.error("Error creating tracks:", err);
@@ -186,7 +186,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
       const leave = async () => {
         if (role === 'host' && streamId) {
           try {
-            await dataService.endLiveStream(streamId, user!.id);
+            await LiveService.endLiveStream(streamId, user!.id);
           } catch (e) {
             console.error("Error ending stream in DB:", e);
           }
@@ -230,7 +230,7 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
 
     setIsSending(true);
     try {
-      await dataService.sendLiveMessage(streamId, user.id, newMessage.trim());
+      await LiveService.sendLiveMessage(streamId, user.id, newMessage.trim());
       setNewMessage('');
     } catch (error) {
       console.error('Error sending live message:', error);

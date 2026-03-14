@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
-import { dataService } from '../services/dataService';
+import { AuthService } from '../services/authService';
+import { ErrorHandler, ErrorType } from '../utils/errorHandler';
 
 interface AuthContextType {
   user: User | null;
@@ -40,23 +41,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (sbError) {
-        console.error('Supabase login error:', sbError);
+        const appError = ErrorHandler.handle(sbError, ErrorType.AUTH);
         
-        if (isRefreshTokenError(sbError)) {
+        if (ErrorHandler.isAuthError(sbError)) {
           localStorage.removeItem('nexury-auth-token');
-          throw new Error('Tu sesión anterior era inválida. Por favor, intenta iniciar sesión de nuevo.');
         }
-
-        if (sbError.message.includes('Email not confirmed')) {
-          throw new Error('Por favor, confirma tu correo electrónico antes de entrar.');
-        }
-        if (sbError.message.includes('Invalid login credentials')) {
-          throw new Error('Credenciales inválidas. Si es tu primera vez en este nuevo servidor, por favor usa la pestaña "Registrarse" para crear tu cuenta.');
-        }
-        if (sbError.message.includes('no configurado')) {
-          throw new Error(sbError.message);
-        }
-        throw sbError;
+        
+        throw new Error(appError.message);
       }
       
       if (data.session) {
@@ -64,8 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       localStorage.setItem('nexury_email', credentials.email);
-    } catch (error) {
-      console.error('Login failed', error);
+    } catch (error: any) {
       throw error;
     } finally {
       setLoading(false);
@@ -169,8 +159,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               await logout();
               return;
             }
-
-            const counts = await dataService.getUserCounts(sbUser.id).catch(() => ({ followers: 0, following: 0, total_likes: 0 }));
+            
+            const counts = await AuthService.getUserCounts(sbUser.id).catch(() => ({ followers: 0, following: 0, total_likes: 0 }));
             const userWithRoles = {
               ...profile,
               is_admin: profile.is_admin || profile.is_super_admin,

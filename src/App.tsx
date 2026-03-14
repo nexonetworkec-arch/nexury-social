@@ -31,7 +31,8 @@ import { Post as PostType } from './types';
 import { supabase } from './lib/supabase';
 import { Feather, CheckCircle, Calendar, Settings, Shield, ShieldAlert, Search as SearchIcon, LogOut } from 'lucide-react';
 import { SEO } from './components/common/SEO';
-import { dataService } from './services/dataService';
+import { SocialService } from './services/socialService';
+import { AdminService } from './services/adminService';
 import { Button } from './components/ui/Button';
 import { PostSkeleton } from './components/ui/Skeleton';
 
@@ -56,8 +57,8 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
       setLoading(true);
       setError(null);
       try {
-        const postsPromise = dataService.getPosts(user?.id, feedType);
-        const adsPromise = dataService.getAds().catch(err => {
+        const postsPromise = SocialService.getPosts(user?.id, feedType);
+        const adsPromise = AdminService.getAds().catch(err => {
           console.warn('Ads table might be missing or inaccessible:', err);
           return [];
         });

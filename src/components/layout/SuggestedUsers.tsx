@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
+import { SocialService } from '../../services/socialService';
+import { AdminService } from '../../services/adminService';
 import { Button } from '../ui/Button';
 import { VerifiedBadge } from '../ui/VerifiedBadge';
 import { UserStatus } from '../ui/UserStatus';
@@ -30,7 +32,7 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
 
   useEffect(() => {
     const checkBenefit = async () => {
-      const active = await dataService.isBenefitActive('appointments');
+      const active = await AdminService.isBenefitActive('appointments');
       setIsAppointmentsEnabled(active);
     };
     checkBenefit();
@@ -40,7 +42,7 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
     const checkFollowing = async () => {
       if (user && id) {
         try {
-          const isFollowing = await dataService.checkIfFollowing(user.id, id);
+          const isFollowing = await SocialService.checkIfFollowing(user.id, id);
           setFollowing(isFollowing);
         } catch (error) {
           console.error('Error checking following status', error);
@@ -56,7 +58,7 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
     const newFollowingState = !following;
     setFollowing(newFollowingState);
     try {
-      await dataService.followUser(user.id, id);
+      await SocialService.followUser(user.id, id);
       await refreshUser();
     } catch (error) {
       console.error('Error following user', error);
@@ -157,7 +159,7 @@ export const SuggestedUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const data = await dataService.getSuggestedUsers(user?.id);
+        const data = await SocialService.getSuggestedUsers(user?.id);
         setAllUsers(data);
         setFilteredUsers(data);
       } catch (error) {

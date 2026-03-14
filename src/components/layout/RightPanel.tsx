@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
-import { dataService } from '../../services/dataService';
+import { SocialService } from '../../services/socialService';
 import { Button } from '../ui/Button';
 import { SuggestedUsers } from './SuggestedUsers';
 
@@ -32,7 +32,7 @@ export const RightPanel = ({
   React.useEffect(() => {
     const fetchTrends = async () => {
       try {
-        const data = await dataService.getTrends();
+        const data = await SocialService.getTrends();
         setTrends(data);
       } catch (err) {
         console.error('Error loading trends:', err);

@@ -2,7 +2,8 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Image, Camera, Save, Upload, Calendar } from 'lucide-react';
 import { Post } from '../../types';
-import { dataService } from '../../services/dataService';
+import { AuthService } from '../../services/authService';
+import { SocialService } from '../../services/socialService';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 
@@ -48,10 +49,10 @@ export const EditPostModal: React.FC<EditPostModalProps> = ({ isOpen, onClose, p
       let finalMediaUrl = mediaUrl;
 
       if (mediaFile) {
-        finalMediaUrl = await dataService.uploadMedia(post.user_id, mediaFile, 'posts');
+        finalMediaUrl = await AuthService.uploadMedia(mediaFile, 'posts');
       }
 
-      const updatedPost = await dataService.updatePost(
+      const updatedPost = await SocialService.updatePost(
         post.id, 
         post.user_id, 
         content, 
