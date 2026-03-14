@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, Bell, User, Bookmark, MoreHorizontal, Calendar, Users, MessageSquare, Video } from 'lucide-react';
+import { Home, Search, Bell, User, Bookmark, MoreHorizontal, Calendar, Users, Video } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
@@ -63,13 +63,6 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
             onClick={() => handleTabClick('Notificaciones')} 
             badgeCount={unreadNotificationsCount}
           />
-          <SidebarItem 
-            icon={MessageSquare} 
-            label="Mensajes" 
-            active={currentView === 'Mensajes'} 
-            onClick={() => handleTabClick('Mensajes')} 
-            badgeCount={unreadMessagesCount}
-          />
           <SidebarItem icon={Calendar} label="Citas" active={currentView === 'Citas'} onClick={() => handleTabClick('Citas')} />
           <SidebarItem icon={Bookmark} label="Guardados" active={currentView === 'Guardados'} onClick={() => handleTabClick('Guardados')} />
           <SidebarItem icon={User} label="Perfil" active={currentView === 'Perfil'} onClick={() => handleTabClick('Perfil')} />
@@ -110,14 +103,6 @@ export const Sidebar = ({ currentView, onViewChange }: { currentView: string, on
             {unreadNotificationsCount > 0 && (
               <span className="absolute top-2 right-2 bg-rose-500 text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full border border-white">
                 {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-              </span>
-            )}
-          </div>
-          <div onClick={() => handleTabClick('Mensajes')} className={cn("p-3 rounded-2xl transition-all flex-shrink-0 relative", currentView === 'Mensajes' ? "text-indigo-600 bg-indigo-50 shadow-sm" : "text-slate-400")}>
-            <MessageSquare size={24} />
-            {unreadMessagesCount > 0 && (
-              <span className="absolute top-2 right-2 bg-rose-500 text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full border border-white">
-                {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
               </span>
             )}
           </div>

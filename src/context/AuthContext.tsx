@@ -27,6 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshingRef = useRef(false);
   const userIdRef = useRef<string | null>(null);
 
+  const isRefreshTokenError = (error: any) => {
+    return error?.message?.includes('Refresh Token Not Found') || 
+           error?.message?.includes('invalid_refresh_token');
+  };
+
   const login = async (credentials: { email: string, password: string }) => {
     try {
       const { data, error: sbError } = await supabase.auth.signInWithPassword({
@@ -36,6 +41,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (sbError) {
         console.error('Supabase login error:', sbError);
+        
+        if (isRefreshTokenError(sbError)) {
+          localStorage.removeItem('nexury-auth-token');
+          throw new Error('Tu sesión anterior era inválida. Por favor, intenta iniciar sesión de nuevo.');
+        }
+
         if (sbError.message.includes('Email not confirmed')) {
           throw new Error('Por favor, confirma tu correo electrónico antes de entrar.');
         }
@@ -83,6 +94,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (authError) {
           console.log('Auth error during refresh:', authError);
+          
+          // Manejar error de token de refresco inválido
+          if (isRefreshTokenError(authError)) {
+            console.warn('Sesión expirada o token inválido detectado. Limpiando estado...');
+            setUser(null);
+            userIdRef.current = null;
+            // Limpiar almacenamiento local para forzar nueva sesión
+            localStorage.removeItem('nexury-auth-token');
+            return;
+          }
+
           if (authError.message === 'Timeout calling getUser' && userIdRef.current) {
             console.log('Timeout but user exists, keeping current state');
             return;
@@ -338,8 +360,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           userIdRef.current = null;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error checking session:', err);
+        // Si el error es por un token de refresco inválido, limpiamos la sesión
+        if (isRefreshTokenError(err)) {
+          console.warn('Error crítico de sesión detectado en el arranque. Cerrando sesión...');
+          await logout();
+        }
       } finally {
         if (mounted) {
           isInitialCheckDone = true;

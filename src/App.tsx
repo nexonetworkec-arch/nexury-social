@@ -14,7 +14,6 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { SuperAdminPanel } from './components/admin/SuperAdminPanel';
 import { AccessDenied } from './components/common/AccessDenied';
 import { AppointmentsList } from './components/appointments/AppointmentsList';
-import { MessagesView } from './components/messages/MessagesView';
 import { ProfileView } from './components/profile/ProfileView';
 import { NexuariosList } from './components/nexuarios/NexuariosList';
 import { NotificationsList } from './components/notifications/NotificationsList';
@@ -535,10 +534,6 @@ const AppContent = () => {
       case 'Perfil':
         return (
           <ProfileView userId={selectedUserId} />
-        );
-      case 'Mensajes':
-        return (
-          <MessagesView targetUserId={selectedUserId || undefined} />
         );
       case 'Notificaciones':
         return (

@@ -23,7 +23,24 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState('100dvh');
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setViewportHeight(`${window.visualViewport.height}px`);
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleResize);
+    window.visualViewport?.addEventListener('scroll', handleResize);
+    
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.visualViewport?.removeEventListener('scroll', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     const initChat = async () => {
@@ -129,9 +146,13 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
       initial={{ y: 20, opacity: 0, scale: 0.9 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       exit={{ y: 20, opacity: 0, scale: 0.9 }}
+      style={{ 
+        height: isMinimized ? '56px' : (window.innerWidth < 640 ? `calc(${viewportHeight} - 4rem)` : '450px'),
+        maxHeight: window.innerWidth < 640 ? `calc(${viewportHeight} - 4rem)` : '450px'
+      }}
       className={cn(
-        "fixed bottom-16 sm:bottom-0 right-0 sm:right-auto sm:relative w-full sm:w-80 bg-white shadow-2xl rounded-t-2xl sm:rounded-2xl border border-slate-100 flex flex-col z-50 transition-all duration-300 pointer-events-auto",
-        isMinimized ? "h-14" : "h-[calc(100vh-12rem)] sm:h-[450px]"
+        "fixed bottom-16 sm:bottom-0 right-0 sm:right-auto sm:relative w-full sm:w-80 bg-white shadow-2xl rounded-t-3xl sm:rounded-2xl border border-slate-100 flex flex-col z-50 transition-all duration-300 pointer-events-auto",
+        isMinimized ? "h-14" : ""
       )}
     >
       {/* Header */}
@@ -215,6 +236,13 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-1"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onFocus={() => {
+                  setTimeout(() => {
+                    if (scrollRef.current) {
+                      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                    }
+                  }, 300);
+                }}
               />
               <button 
                 type="submit"
@@ -239,6 +267,17 @@ const ChatHistoryPanel: React.FC = () => {
   const [search, setSearch] = useState('');
   const [globalResults, setGlobalResults] = useState<any[]>([]);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState('100dvh');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        setViewportHeight(`${window.visualViewport.height}px`);
+      }
+    };
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const searchGlobal = async () => {
@@ -279,7 +318,10 @@ const ChatHistoryPanel: React.FC = () => {
       initial={{ scale: 0.9, opacity: 0, y: 20, x: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0, x: 0 }}
       exit={{ scale: 0.9, opacity: 0, y: 20, x: 20 }}
-      className="absolute bottom-16 right-0 w-[calc(100vw-2rem)] sm:w-96 bg-white shadow-2xl rounded-3xl border border-slate-100 flex flex-col z-50 overflow-hidden max-h-[70vh] sm:max-h-[600px]"
+      style={{ 
+        maxHeight: window.innerWidth < 640 ? `calc(${viewportHeight} - 6rem)` : '600px'
+      }}
+      className="absolute bottom-16 right-0 w-[calc(100vw-2rem)] sm:w-96 bg-white shadow-2xl rounded-3xl border border-slate-100 flex flex-col z-50 overflow-hidden"
     >
       <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
         <h3 className="text-xl font-bold text-slate-900">Mensajes</h3>

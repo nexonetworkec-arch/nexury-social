@@ -10,6 +10,8 @@ import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal
 import { cn } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 
+import { useChat } from '../../context/ChatContext';
+
 interface FollowItemProps {
   id: string;
   name: string;
@@ -21,6 +23,7 @@ interface FollowItemProps {
 
 const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, isVerified, isLive }) => {
   const { user, refreshUser } = useAuth();
+  const { openChat } = useChat();
   const [following, setFollowing] = useState(false);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
   const [isAppointmentsEnabled, setIsAppointmentsEnabled] = useState(false);
@@ -65,9 +68,7 @@ const FollowItem: React.FC<FollowItemProps> = ({ id, name, username, avatarUrl, 
     e.stopPropagation();
     if (!user) return;
     try {
-      await dataService.getOrCreateConversation(user.id, id);
-      const event = new CustomEvent('changeView', { detail: 'Mensajes' });
-      window.dispatchEvent(event);
+      openChat(id);
     } catch (error) {
       console.error('Error starting conversation', error);
     }
