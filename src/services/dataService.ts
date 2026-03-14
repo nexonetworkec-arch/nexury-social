@@ -677,6 +677,49 @@ export const dataService = {
       .eq('id', streamId);
   },
 
+  async getLiveMessages(streamId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('live_messages')
+      .select(`
+        *,
+        profiles:user_id (username, avatar_url, display_name)
+      `)
+      .eq('stream_id', streamId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.warn('live_messages table might be missing:', error);
+      return [];
+    }
+
+    return (data || []).map((msg: any) => ({
+      ...msg,
+      username: msg.profiles?.username,
+      display_name: msg.profiles?.display_name,
+      avatar_url: msg.profiles?.avatar_url
+    }));
+  },
+
+  async sendLiveMessage(streamId: string, userId: string, content: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('live_messages')
+      .insert([{ stream_id: streamId, user_id: userId, content }])
+      .select(`
+        *,
+        profiles:user_id (username, avatar_url, display_name)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    return {
+      ...data,
+      username: data.profiles?.username,
+      display_name: data.profiles?.display_name,
+      avatar_url: data.profiles?.avatar_url
+    };
+  },
+
   async recordUniqueView(viewerId: string, targetId: string, targetType: 'post' | 'profile'): Promise<boolean> {
     try {
       const { data, error } = await supabase.rpc('record_unique_view', {

@@ -3,6 +3,7 @@ import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } f
 import { X, Users, Mic, MicOff, Video, VideoOff, Send, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { dataService } from '../../services/dataService';
+import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -32,9 +33,65 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [streamId, setStreamId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   
   const localVideoRef = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Suscripción en tiempo real al chat
+  useEffect(() => {
+    if (!streamId) return;
+
+    // Cargar mensajes iniciales
+    const loadMessages = async () => {
+      const initialMessages = await dataService.getLiveMessages(streamId);
+      setMessages(initialMessages);
+    };
+    loadMessages();
+
+    // Suscribirse a nuevos mensajes
+    const channel = supabase
+      .channel(`live_chat_${streamId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'live_messages',
+          filter: `stream_id=eq.${streamId}`
+        },
+        async (payload) => {
+          // Obtener el perfil del usuario que envió el mensaje
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url, display_name')
+            .eq('id', payload.new.user_id)
+            .single();
+          
+          const fullMessage = {
+            ...payload.new,
+            username: profile?.username,
+            display_name: profile?.display_name,
+            avatar_url: profile?.avatar_url
+          };
+          
+          setMessages(prev => [...prev, fullMessage]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [streamId]);
 
   useEffect(() => {
     let agoraClient: IAgoraRTCClient;
@@ -115,6 +172,21 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
     }
   };
 
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newMessage.trim() || !streamId || !user || isSending) return;
+
+    setIsSending(true);
+    try {
+      await dataService.sendLiveMessage(streamId, user.id, newMessage.trim());
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending live message:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.9 }}
@@ -171,30 +243,52 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
         </div>
       </div>
 
-      {/* Chat Sidebar (Placeholder) */}
+      {/* Chat Sidebar */}
       <div className="w-full sm:w-80 h-full max-h-[400px] sm:max-h-none sm:ml-6 flex flex-col bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden mt-4 sm:mt-0">
         <div className="p-4 border-b border-white/10">
           <h4 className="text-white font-bold text-sm">Chat en vivo</h4>
         </div>
-        <div className="flex-1 p-4 overflow-y-auto space-y-4">
-          <div className="flex gap-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-500 shrink-0" />
-            <div className="bg-white/10 p-3 rounded-2xl rounded-tl-none">
-              <p className="text-white text-xs font-bold mb-1">Nexury Bot</p>
-              <p className="text-white/80 text-xs">¡Bienvenido al stream! Sé respetuoso con los demás.</p>
+        <div className="flex-1 p-4 overflow-y-auto space-y-4 scrollbar-hide">
+          {messages.length === 0 && (
+            <div className="flex gap-2">
+              <div className="w-8 h-8 rounded-full bg-indigo-500 shrink-0" />
+              <div className="bg-white/10 p-3 rounded-2xl rounded-tl-none">
+                <p className="text-white text-xs font-bold mb-1">Nexury Bot</p>
+                <p className="text-white/80 text-xs">¡Bienvenido al stream! Sé respetuoso con los demás.</p>
+              </div>
             </div>
-          </div>
+          )}
+          {messages.map((msg) => (
+            <div key={msg.id} className="flex gap-2">
+              <img 
+                src={msg.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.user_id}`} 
+                alt={msg.username}
+                className="w-8 h-8 rounded-full shrink-0 object-cover"
+              />
+              <div className="bg-white/10 p-3 rounded-2xl rounded-tl-none">
+                <p className="text-white text-[10px] font-bold mb-1">{msg.display_name || msg.username}</p>
+                <p className="text-white/90 text-xs">{msg.content}</p>
+              </div>
+            </div>
+          ))}
+          <div ref={chatEndRef} />
         </div>
-        <div className="p-4 bg-black/20 flex gap-2">
+        <form onSubmit={handleSendMessage} className="p-4 bg-black/20 flex gap-2">
           <input 
             type="text" 
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Di algo..." 
             className="flex-1 bg-white/10 border-none rounded-xl px-4 py-2 text-white text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
           />
-          <button className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 transition-all">
+          <button 
+            type="submit"
+            disabled={!newMessage.trim() || isSending}
+            className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 transition-all disabled:opacity-50"
+          >
             <Send size={18} />
           </button>
-        </div>
+        </form>
       </div>
     </motion.div>
   );

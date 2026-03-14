@@ -44,10 +44,32 @@ SELECT
 FROM public.posts p
 JOIN public.profiles pr ON p.user_id = pr.id;
 
--- 5. HABILITAR REALTIME PARA LIVE STREAMS
+-- 6. TABLA DE MENSAJES DE CHAT EN VIVO
+CREATE TABLE IF NOT EXISTS public.live_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  stream_id UUID REFERENCES public.live_streams(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 7. HABILITAR RLS PARA LIVE MESSAGES
+ALTER TABLE public.live_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Lectura pública de mensajes de stream" ON public.live_messages;
+CREATE POLICY "Lectura pública de mensajes de stream" ON public.live_messages FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Usuarios pueden enviar mensajes" ON public.live_messages;
+CREATE POLICY "Usuarios pueden enviar mensajes" ON public.live_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- 8. HABILITAR REALTIME
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'live_streams') THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.live_streams;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'live_messages') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.live_messages;
   END IF;
 END $$;
