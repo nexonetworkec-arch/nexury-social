@@ -134,6 +134,7 @@ export interface LiveStream {
   viewer_count: number;
   is_active: boolean;
   started_at: string;
+  ended_at?: string;
   username: string;
   display_name: string;
   avatar_url: string;

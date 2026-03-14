@@ -163,7 +163,11 @@ export const LiveStream: React.FC<LiveStreamProps> = ({
             setRemoteUsers(prev => prev.filter(u => u.uid !== remoteUser.uid));
           });
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.message?.includes('OPERATION_ABORTED') || err.code === 'OPERATION_ABORTED') {
+          console.warn("Agora Init aborted (likely component unmounted or double init)");
+          return;
+        }
         console.error("Agora Init Error:", err);
         if (!initError) setInitError("Error al conectar con el servidor de streaming.");
       } finally {

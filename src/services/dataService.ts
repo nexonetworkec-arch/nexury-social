@@ -630,6 +630,44 @@ export const dataService = {
     }));
   },
 
+  async getPastLiveStreams(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('live_streams')
+      .select(`
+        *,
+        profiles:user_id (
+          username,
+          display_name,
+          avatar_url,
+          is_verified
+        )
+      `)
+      .eq('is_active', false)
+      .order('ended_at', { ascending: false })
+      .limit(20);
+
+    if (error) return [];
+
+    return (data || []).map((stream: any) => ({
+      ...stream,
+      username: stream.profiles?.username,
+      display_name: stream.profiles?.display_name,
+      avatar_url: stream.profiles?.avatar_url,
+      is_verified: !!stream.profiles?.is_verified
+    }));
+  },
+
+  async deleteLiveStream(streamId: string, userId: string) {
+    const { error } = await supabase
+      .from('live_streams')
+      .delete()
+      .eq('id', streamId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return { success: true };
+  },
+
   async startLiveStream(userId: string, title: string): Promise<any> {
     const { data, error } = await supabase
       .from('live_streams')
@@ -1196,6 +1234,7 @@ export const dataService = {
       .from('messages')
       .update({ is_read: true })
       .eq('conversation_id', conversationId)
+      .eq('is_read', false)
       .neq('sender_id', userId);
     
     if (error) throw error;
@@ -1206,7 +1245,8 @@ export const dataService = {
         .from('notifications')
         .update({ read: 1 })
         .eq('user_id', userId)
-        .eq('type', 'message');
+        .eq('type', 'message')
+        .eq('read', 0);
     } catch (nErr) {
       console.error('Error clearing message notifications:', nErr);
     }
