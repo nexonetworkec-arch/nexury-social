@@ -1200,6 +1200,26 @@ export const dataService = {
     return { success: true };
   },
 
+  async deleteNotification(notificationId: string) {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+    
+    if (error) throw error;
+    return { success: true };
+  },
+
+  async clearAllNotifications(userId: string) {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return { success: true };
+  },
+
   async getUnreadNotificationsCount(userId: string): Promise<number> {
     const { count, error } = await supabase
       .from('notifications')
