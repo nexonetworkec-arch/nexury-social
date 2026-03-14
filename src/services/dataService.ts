@@ -767,7 +767,12 @@ export const dataService = {
       });
       
       if (error) {
-        // Si el RPC falla (ej. no existe aún), intentamos inserción directa
+        // Manejar errores de conflicto (409) que el RPC pueda lanzar si no tiene ON CONFLICT
+        if (error.code === '23505' || error.message?.includes('409')) {
+          return false;
+        }
+
+        // Si el RPC falla por otras razones, intentamos inserción directa
         if (targetType === 'post') {
           const { error: insertError } = await supabase
             .from('post_views')
@@ -1673,14 +1678,19 @@ export const dataService = {
       if (commonConv) return commonConv.conversation_id;
 
       // 2. Si no existe, crearla
+      // Usamos .select() para obtener el ID de la nueva conversación
       const { data: newConv, error: convError } = await supabase
         .from('conversations')
         .insert([{}])
-        .select()
+        .select('id')
         .single();
 
-      if (convError) throw convError;
+      if (convError) {
+        console.error('Error creating conversation:', convError);
+        throw convError;
+      }
 
+      // 3. Añadir participantes
       const { error: partError } = await supabase
         .from('conversation_participants')
         .insert([
@@ -1688,7 +1698,12 @@ export const dataService = {
           { conversation_id: newConv.id, user_id: user2Id }
         ]);
 
-      if (partError) throw partError;
+      if (partError) {
+        // Si falla al añadir participantes, intentamos limpiar la conversación huérfana
+        console.error('Error adding participants, cleaning up:', partError);
+        await supabase.from('conversations').delete().eq('id', newConv.id);
+        throw partError;
+      }
 
       return newConv.id;
     } catch (error) {
