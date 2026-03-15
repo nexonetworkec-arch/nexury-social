@@ -13,6 +13,14 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 -- RLS
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- CLEANUP POLICIES
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "notifications_read_self" ON public.notifications;
+    DROP POLICY IF EXISTS "notifications_insert_auth" ON public.notifications;
+    DROP POLICY IF EXISTS "notifications_manage_self" ON public.notifications;
+END $$;
+
 -- POLICIES
 CREATE POLICY "notifications_read_self" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "notifications_insert_auth" ON public.notifications FOR INSERT WITH CHECK (auth.role() = 'authenticated');

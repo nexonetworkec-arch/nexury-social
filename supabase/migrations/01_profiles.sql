@@ -27,8 +27,27 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 2.1 ADD MISSING COLUMNS (In case table already existed)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_live BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_super_admin BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS total_likes_received INTEGER DEFAULT 0;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS views_count INTEGER DEFAULT 0;
+
 -- RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- CLEANUP POLICIES
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "profiles_read_all" ON public.profiles;
+    DROP POLICY IF EXISTS "profiles_self_update" ON public.profiles;
+END $$;
 
 -- Helper Functions for RLS
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -110,22 +129,46 @@ CREATE TRIGGER on_auth_user_created
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES 
     ('avatars', 'avatars', true, null, '{image/*}'),
-    ('media', 'media', true, null, '{image/*,video/*}')
+    ('media', 'media', true, null, '{image/*,video/*}'),
+    ('posts', 'posts', true, null, '{image/*,video/*}'),
+    ('ads', 'ads', true, null, '{image/*}')
 ON CONFLICT (id) DO UPDATE SET 
     file_size_limit = null,
     public = true,
     allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Storage Policies
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+    DROP POLICY IF EXISTS "Media is publicly accessible" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can upload media" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can update their media" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can delete their media" ON storage.objects;
+    DROP POLICY IF EXISTS "Posts are publicly accessible" ON storage.objects;
+    DROP POLICY IF EXISTS "Users can upload posts" ON storage.objects;
+    DROP POLICY IF EXISTS "Ads are publicly accessible" ON storage.objects;
+    DROP POLICY IF EXISTS "Admins can upload ads" ON storage.objects;
+END $$;
+
 CREATE POLICY "Avatar images are publicly accessible" ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars');
-CREATE POLICY "Users can upload their own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Users can update their own avatar" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Users can delete their own avatar" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "Users can upload their own avatar" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
+CREATE POLICY "Users can update their own avatar" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars');
+CREATE POLICY "Users can delete their own avatar" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars');
 
 CREATE POLICY "Media is publicly accessible" ON storage.objects FOR SELECT TO public USING (bucket_id = 'media');
 CREATE POLICY "Users can upload media" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'media');
 CREATE POLICY "Users can update their media" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'media');
 CREATE POLICY "Users can delete their media" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'media');
+
+CREATE POLICY "Posts are publicly accessible" ON storage.objects FOR SELECT TO public USING (bucket_id = 'posts');
+CREATE POLICY "Users can upload posts" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'posts');
+
+CREATE POLICY "Ads are publicly accessible" ON storage.objects FOR SELECT TO public USING (bucket_id = 'ads');
+CREATE POLICY "Admins can upload ads" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'ads' AND (SELECT is_admin OR is_super_admin FROM public.profiles WHERE id = auth.uid()));
 
 -- BACKFILL
 INSERT INTO public.profiles (id, email, username, display_name, avatar_url)

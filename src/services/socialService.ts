@@ -8,7 +8,7 @@ export class SocialService extends BaseService {
       .from('posts')
       .select(`
         *,
-        profiles:user_id (
+        profiles (
           username,
           display_name,
           avatar_url,
@@ -39,7 +39,7 @@ export class SocialService extends BaseService {
       .from('posts')
       .select(`
         *,
-        profiles:user_id (
+        profiles (
           username,
           display_name,
           avatar_url,
@@ -61,10 +61,16 @@ export class SocialService extends BaseService {
   static async createPost(userId: string, content: string, imageUrl?: string, mediaType: 'image' | 'video' = 'image', showAppointmentButton: boolean = false): Promise<Post> {
     const { data, error } = await supabase
       .from('posts')
-      .insert([{ user_id: userId, content, image_url: imageUrl, media_type: mediaType, show_appointment_button: showAppointmentButton }])
+      .insert([{ 
+        user_id: userId, 
+        content, 
+        image_url: imageUrl, 
+        media_type: mediaType, 
+        show_appointment_button: showAppointmentButton 
+      }])
       .select(`
         *,
-        profiles:user_id (
+        profiles (
           username,
           display_name,
           avatar_url,
@@ -98,6 +104,8 @@ export class SocialService extends BaseService {
   private static mapPostData(post: any): Post {
     return {
       ...post,
+      media_url: post.image_url,
+      has_appointments: post.show_appointment_button,
       username: post.profiles?.username,
       display_name: post.profiles?.display_name,
       avatar_url: post.profiles?.avatar_url,
@@ -115,13 +123,23 @@ export class SocialService extends BaseService {
   }
 
   static async updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
+    // Map frontend fields to database fields
+    const dbUpdates: any = {};
+    if (updates.content !== undefined) dbUpdates.content = updates.content;
+    if (updates.media_url !== undefined) dbUpdates.image_url = updates.media_url;
+    if (updates.media_type !== undefined) dbUpdates.media_type = updates.media_type;
+    if (updates.has_appointments !== undefined) dbUpdates.show_appointment_button = updates.has_appointments;
+    if (updates.likes_count !== undefined) dbUpdates.likes_count = updates.likes_count;
+    if (updates.comments_count !== undefined) dbUpdates.comments_count = updates.comments_count;
+    if (updates.views_count !== undefined) dbUpdates.views_count = updates.views_count;
+
     const { data, error } = await supabase
       .from('posts')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', postId)
       .select(`
         *,
-        profiles:user_id (
+        profiles (
           username,
           display_name,
           avatar_url,
@@ -129,6 +147,7 @@ export class SocialService extends BaseService {
         )
       `)
       .single();
+    
     if (error) throw error;
     return this.mapPostData(data);
   }
@@ -166,7 +185,7 @@ export class SocialService extends BaseService {
         .from('comments')
         .select(`
           *,
-          profiles:user_id (username, display_name, avatar_url, is_verified)
+          profiles (username, display_name, avatar_url, is_verified)
         `)
         .eq('post_id', postId)
         .order('created_at', { ascending: true })
@@ -179,7 +198,7 @@ export class SocialService extends BaseService {
       .insert([{ post_id: postId, user_id: userId, content }])
       .select(`
         *,
-        profiles:user_id (username, display_name, avatar_url, is_verified)
+        profiles (username, display_name, avatar_url, is_verified)
       `)
       .single();
 
@@ -291,7 +310,7 @@ export class SocialService extends BaseService {
         post_id,
         posts:post_id (
           *,
-          profiles:user_id (username, display_name, avatar_url, is_verified)
+          profiles (username, display_name, avatar_url, is_verified)
         )
       `)
       .eq('user_id', userId)

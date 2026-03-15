@@ -18,6 +18,7 @@ export const AdminPanel = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAddingAd, setIsAddingAd] = useState(false);
   const [isUploadingAdImage, setIsUploadingAdImage] = useState(false);
@@ -87,6 +88,9 @@ export const AdminPanel = () => {
         } else if (activeTab === 'ads') {
           const data = await AdminService.getAds();
           setAds(data as any[]);
+        } else if (activeTab === 'settings') {
+          const data = await AdminService.getGlobalSettings();
+          setSettings(data);
         }
       } catch (error) {
         console.error('Error fetching admin data', error);
@@ -146,7 +150,7 @@ export const AdminPanel = () => {
 
     setIsUploadingAdImage(true);
     try {
-      const url = await AuthService.uploadMedia(file, 'posts');
+      const url = await AuthService.uploadMedia(file, 'ads');
       setNewAd(prev => ({ ...prev, image_url: url }));
     } catch (error: any) {
       console.error('Error uploading ad image:', error);
@@ -163,6 +167,16 @@ export const AdminPanel = () => {
     } catch (error) {
       console.error('Error toggling verification', error);
       alert('Error al cambiar el estado de verificación');
+    }
+  };
+
+  const handleUpdateSettings = async (updates: any) => {
+    try {
+      await AdminService.updateGlobalSettings(updates);
+      setSettings(prev => ({ ...prev, ...updates }));
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      alert('Error al actualizar la configuración');
     }
   };
 
@@ -665,7 +679,7 @@ export const AdminPanel = () => {
               </div>
             )}
 
-            {activeTab === 'settings' && (
+            {activeTab === 'settings' && settings && (
               <div className="space-y-6">
                 <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
                   <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -678,8 +692,17 @@ export const AdminPanel = () => {
                         <p className="font-bold text-sm text-slate-900">Modo Mantenimiento</p>
                         <p className="text-xs text-slate-500">Desactiva el acceso a usuarios no administradores.</p>
                       </div>
-                      <button className="w-12 h-6 bg-slate-200 rounded-full relative">
-                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full" />
+                      <button 
+                        onClick={() => handleUpdateSettings({ maintenance_mode: !settings.maintenance_mode })}
+                        className={cn(
+                          "w-12 h-6 rounded-full relative transition-colors",
+                          settings.maintenance_mode ? "bg-indigo-600" : "bg-slate-200"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                          settings.maintenance_mode ? "right-1" : "left-1"
+                        )} />
                       </button>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100">
@@ -687,8 +710,17 @@ export const AdminPanel = () => {
                         <p className="font-bold text-sm text-slate-900">Registros Abiertos</p>
                         <p className="text-xs text-slate-500">Permitir que nuevos usuarios se registren.</p>
                       </div>
-                      <button className="w-12 h-6 bg-indigo-600 rounded-full relative">
-                        <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
+                      <button 
+                        onClick={() => handleUpdateSettings({ registrations_open: !settings.registrations_open })}
+                        className={cn(
+                          "w-12 h-6 rounded-full relative transition-colors",
+                          settings.registrations_open ? "bg-indigo-600" : "bg-slate-200"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                          settings.registrations_open ? "right-1" : "left-1"
+                        )} />
                       </button>
                     </div>
                   </div>

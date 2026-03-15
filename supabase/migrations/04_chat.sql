@@ -33,6 +33,20 @@ ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
+-- CLEANUP POLICIES
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "participants_select_safe" ON public.conversation_participants;
+    DROP POLICY IF EXISTS "participants_insert_safe" ON public.conversation_participants;
+    DROP POLICY IF EXISTS "participants_delete_self" ON public.conversation_participants;
+    DROP POLICY IF EXISTS "conversations_select_safe" ON public.conversations;
+    DROP POLICY IF EXISTS "conversations_insert_safe" ON public.conversations;
+    DROP POLICY IF EXISTS "conversations_update_safe" ON public.conversations;
+    DROP POLICY IF EXISTS "messages_select_safe" ON public.messages;
+    DROP POLICY IF EXISTS "messages_insert_self" ON public.messages;
+    DROP POLICY IF EXISTS "messages_update_self" ON public.messages;
+END $$;
+
 -- POLICIES
 CREATE POLICY "participants_select_safe" ON public.conversation_participants FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "participants_insert_safe" ON public.conversation_participants FOR INSERT WITH CHECK (auth.role() = 'authenticated');

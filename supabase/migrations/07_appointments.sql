@@ -13,5 +13,11 @@ CREATE TABLE IF NOT EXISTS public.appointments (
 -- RLS
 ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
 
+-- CLEANUP POLICIES
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "appointments_self_manage" ON public.appointments;
+END $$;
+
 -- POLICIES
 CREATE POLICY "appointments_self_manage" ON public.appointments FOR ALL USING (auth.uid() = requester_id OR auth.uid() = receiver_id);

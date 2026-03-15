@@ -8,8 +8,8 @@ export class AppointmentService extends BaseService {
       .from('appointments')
       .select(`
         *,
-        requester:requester_id (username, display_name, avatar_url, is_verified),
-        receiver:receiver_id (username, display_name, avatar_url, is_verified)
+        requester:profiles!requester_id (username, display_name, avatar_url, is_verified),
+        receiver:profiles!receiver_id (username, display_name, avatar_url, is_verified)
       `)
       .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('appointment_date', { ascending: true });

@@ -8,7 +8,7 @@ export class ChatService extends BaseService {
       .from('conversation_participants')
       .select(`
         conversation_id,
-        conversations:conversation_id (
+        conversations!conversation_id (
           id,
           created_at,
           last_message,
@@ -24,7 +24,7 @@ export class ChatService extends BaseService {
       const { data: participants } = await supabase
         .from('conversation_participants')
         .select(`
-          profiles:user_id (
+          profiles!user_id (
             id,
             username,
             display_name,
@@ -101,7 +101,7 @@ export class ChatService extends BaseService {
         .select(`
           *,
           participants:conversation_participants(
-            profiles:user_id(*)
+            profiles!user_id(*)
           )
         `)
         .eq('id', data)

@@ -37,6 +37,15 @@ ALTER TABLE public.ads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verified_benefits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.verified_benefits_users ENABLE ROW LEVEL SECURITY;
 
+-- CLEANUP POLICIES
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "ads_read_all" ON public.ads;
+    DROP POLICY IF EXISTS "benefits_read_all" ON public.verified_benefits;
+    DROP POLICY IF EXISTS "benefits_users_read_self" ON public.verified_benefits_users;
+END $$;
+
 -- POLICIES
 CREATE POLICY "ads_read_all" ON public.ads FOR SELECT USING (true);
 CREATE POLICY "benefits_read_all" ON public.verified_benefits FOR SELECT USING (true);
+CREATE POLICY "benefits_users_read_self" ON public.verified_benefits_users FOR SELECT USING (auth.uid() = user_id);

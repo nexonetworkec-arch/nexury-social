@@ -20,6 +20,21 @@ CREATE TABLE IF NOT EXISTS public.profile_views (
 ALTER TABLE public.post_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_views ENABLE ROW LEVEL SECURITY;
 
+-- CLEANUP POLICIES
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "post_views_read_all" ON public.post_views;
+    DROP POLICY IF EXISTS "post_views_insert_auth" ON public.post_views;
+    DROP POLICY IF EXISTS "profile_views_read_all" ON public.profile_views;
+    DROP POLICY IF EXISTS "profile_views_insert_auth" ON public.profile_views;
+END $$;
+
+-- POLICIES
+CREATE POLICY "post_views_read_all" ON public.post_views FOR SELECT USING (true);
+CREATE POLICY "post_views_insert_auth" ON public.post_views FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "profile_views_read_all" ON public.profile_views FOR SELECT USING (true);
+CREATE POLICY "profile_views_insert_auth" ON public.profile_views FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
 -- RPCs
 CREATE OR REPLACE FUNCTION public.record_view_atomic(p_post_id UUID, p_user_id UUID DEFAULT NULL)
 RETURNS VOID AS $$
