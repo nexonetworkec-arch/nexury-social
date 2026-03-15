@@ -3,6 +3,10 @@ import { User } from '../types';
 import { BaseService } from './baseService';
 
 export class AuthService extends BaseService {
+  static async getProfile(userId: string): Promise<User> {
+    return this.getUserProfile(userId);
+  }
+
   static async getUserProfile(userId: string): Promise<User> {
     return this.handleResponse<User>(
       supabase

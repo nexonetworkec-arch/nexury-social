@@ -158,8 +158,8 @@ export const AdminPanel = () => {
 
   const handleToggleVerify = async (userId: string, currentStatus: boolean) => {
     try {
-      const updatedUser = await AdminService.verifyUser(userId, !currentStatus);
-      setUsers(users.map(u => u.id === userId ? { ...u, is_verified: updatedUser.is_verified } : u));
+      await AdminService.verifyUser(userId, !currentStatus);
+      setUsers(users.map(u => u.id === userId ? { ...u, is_verified: !currentStatus } : u));
     } catch (error) {
       console.error('Error toggling verification', error);
       alert('Error al cambiar el estado de verificación');
@@ -178,8 +178,8 @@ export const AdminPanel = () => {
         alert('Usuario eliminado correctamente');
       } else if (confirmModal.action === 'block-user' || confirmModal.action === 'unblock-user') {
         const isBlocked = confirmModal.action === 'block-user';
-        const updatedUser = await AdminService.blockUser(confirmModal.targetId, isBlocked);
-        setUsers(users.map(u => u.id === confirmModal.targetId ? { ...u, is_blocked: updatedUser.is_blocked } : u));
+        await AdminService.blockUser(confirmModal.targetId, isBlocked);
+        setUsers(users.map(u => u.id === confirmModal.targetId ? { ...u, is_blocked: isBlocked } : u));
         alert(isBlocked ? 'Usuario bloqueado' : 'Usuario desbloqueado');
       } else if (confirmModal.action === 'delete-post') {
         if (!currentUser) return;

@@ -279,7 +279,7 @@ BEGIN
     WHERE id = auth.uid() AND (is_admin = TRUE OR is_super_admin = TRUE OR permissions->>'role' = 'admin')
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- POLICIES: PROFILES
 CREATE POLICY "profiles_read_all" ON public.profiles FOR SELECT USING (true);
@@ -342,14 +342,26 @@ DECLARE
     v_avatar_url TEXT;
 BEGIN
     -- Extract metadata with fallbacks
-    v_display_name := COALESCE(NULLIF(NEW.raw_user_meta_data->>'display_name', ''), NEW.raw_user_meta_data->>'full_name', 'Usuario');
-    v_avatar_url := COALESCE(NULLIF(NEW.raw_user_meta_data->>'avatar_url', ''), 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || NEW.id);
+    v_display_name := COALESCE(
+        NULLIF(NEW.raw_user_meta_data->>'display_name', ''), 
+        NULLIF(NEW.raw_user_meta_data->>'full_name', ''), 
+        'Usuario'
+    );
+    
+    v_avatar_url := COALESCE(
+        NULLIF(NEW.raw_user_meta_data->>'avatar_url', ''), 
+        'https://api.dicebear.com/7.x/avataaars/svg?seed=' || NEW.id
+    );
     
     -- Generate username from email or metadata
     v_username := LOWER(COALESCE(
         NULLIF(NEW.raw_user_meta_data->>'username', ''),
-        SPLIT_PART(NEW.email, '@', 1)
+        SPLIT_PART(NEW.email, '@', 1),
+        'user'
     ));
+
+    -- Clean username (only alphanumeric and underscores)
+    v_username := REGEXP_REPLACE(v_username, '[^a-zA-Z0-9_]', '', 'g');
 
     -- Ensure username is at least 3 characters and unique-ish
     IF char_length(v_username) < 3 THEN
@@ -359,19 +371,24 @@ BEGIN
         v_username := v_username || '_' || SUBSTR(NEW.id::text, 1, 4);
     END IF;
 
+    -- Final fallback if still too short
+    IF char_length(v_username) < 3 THEN
+        v_username := 'user_' || SUBSTR(NEW.id::text, 1, 8);
+    END IF;
+
     INSERT INTO public.profiles (id, email, username, display_name, avatar_url)
     VALUES (NEW.id, NEW.email, v_username, v_display_name, v_avatar_url)
     ON CONFLICT (id) DO UPDATE SET
         email = EXCLUDED.email,
-        display_name = COALESCE(profiles.display_name, EXCLUDED.display_name),
-        avatar_url = COALESCE(profiles.avatar_url, EXCLUDED.avatar_url);
+        display_name = COALESCE(public.profiles.display_name, EXCLUDED.display_name),
+        avatar_url = COALESCE(public.profiles.avatar_url, EXCLUDED.avatar_url);
 
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-    -- Log error if possible or just return NEW to not block auth signup
+    -- Log error but don't fail auth signup
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -393,7 +410,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_like_change ON public.likes;
 CREATE TRIGGER on_like_change
@@ -411,7 +428,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_comment_change ON public.comments;
 CREATE TRIGGER on_comment_change
@@ -431,7 +448,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_follow_change ON public.follows;
 CREATE TRIGGER on_follow_change
@@ -449,7 +466,7 @@ BEGIN
     WHERE id = NEW.conversation_id;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_message_insert ON public.messages;
 CREATE TRIGGER on_message_insert
@@ -474,14 +491,14 @@ BEGIN
     
     RETURN v_conversation_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE FUNCTION public.create_conversation_with_participants(p_participant_ids UUID[])
 RETURNS UUID AS $$
 BEGIN
     RETURN public.create_chat_atomic(p_participant_ids);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ATOMIC VIEW RECORDING
 CREATE OR REPLACE FUNCTION public.record_view_atomic(p_post_id UUID, p_user_id UUID DEFAULT NULL)
@@ -495,7 +512,7 @@ BEGIN
         UPDATE public.posts SET views_count = views_count + 1 WHERE id = p_post_id;
     END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE FUNCTION public.record_profile_view_atomic(p_profile_id UUID, p_viewer_id UUID)
 RETURNS VOID AS $$
@@ -508,7 +525,7 @@ BEGIN
         UPDATE public.profiles SET views_count = views_count + 1 WHERE id = p_profile_id;
     END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 5. VIEWS
 CREATE OR REPLACE VIEW public.posts_with_profiles AS

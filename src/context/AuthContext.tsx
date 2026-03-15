@@ -220,8 +220,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (sbError) {
         console.error('Supabase registration error:', sbError);
-        if (sbError.message.includes('Database error saving new user')) {
-          throw new Error('Error al crear el perfil. Por favor, ejecuta el Código Maestro SQL en Supabase.');
+        if (sbError.message.includes('Database error saving new user') || sbError.message.includes('Database error updating user')) {
+          throw new Error('Error al crear el perfil. Por favor, asegúrate de que el Código Maestro SQL se haya ejecutado correctamente en Supabase.');
         }
         throw sbError;
       }

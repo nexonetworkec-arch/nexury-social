@@ -3,8 +3,8 @@ import { Post, Comment } from '../types';
 import { BaseService } from './baseService';
 
 export class SocialService extends BaseService {
-  static async getPosts(currentUserId?: string, limit = 50): Promise<Post[]> {
-    const { data, error } = await supabase
+  static async getPosts(currentUserId?: string, feedType: 'recent' | 'smart' = 'smart', limit = 50): Promise<Post[]> {
+    let query = supabase
       .from('posts')
       .select(`
         *,
@@ -16,9 +16,17 @@ export class SocialService extends BaseService {
           is_super_admin,
           is_live
         )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      `);
+
+    if (feedType === 'smart') {
+      // Smart feed logic could go here (e.g. based on interests or following)
+      // For now, we just use recent but could be expanded
+      query = query.order('created_at', { ascending: false });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    const { data, error } = await query.limit(limit);
 
     if (error) throw error;
 
@@ -97,8 +105,12 @@ export class SocialService extends BaseService {
     };
   }
 
-  static async deletePost(postId: string): Promise<void> {
-    const { error } = await supabase.from('posts').delete().eq('id', postId);
+  static async deletePost(postId: string, userId: string, isAdmin = false): Promise<void> {
+    const query = supabase.from('posts').delete().eq('id', postId);
+    if (!isAdmin) {
+      query.eq('user_id', userId);
+    }
+    const { error } = await query;
     if (error) throw error;
   }
 
@@ -194,6 +206,17 @@ export class SocialService extends BaseService {
       await supabase.from('follows').insert([{ follower_id: followerId, following_id: followingId }]);
       return true;
     }
+  }
+
+  static async recordProfileView(profileId: string, viewerId: string): Promise<void> {
+    await supabase.rpc('record_profile_view_atomic', { p_profile_id: profileId, p_viewer_id: viewerId });
+  }
+
+  static async blockUser(blockerId: string, blockedId: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_blocks')
+      .insert([{ blocker_id: blockerId, blocked_id: blockedId }]);
+    if (error) throw error;
   }
 
   static async getSuggestedUsers(userId: string): Promise<any[]> {

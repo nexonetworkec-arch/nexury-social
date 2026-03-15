@@ -28,11 +28,12 @@ export const RequestAppointmentModal: React.FC<RequestAppointmentModalProps> = (
     try {
       const appointmentDate = `${date}T${time}:00`;
       await AppointmentService.createAppointment({
-        requesterId: user.id,
-        receiverId: targetUser.id,
+        requester_id: user.id,
+        receiver_id: targetUser.id,
         title,
         description,
-        appointmentDate
+        appointment_date: appointmentDate,
+        status: 'pending'
       });
       setSuccess(true);
       setTimeout(() => {

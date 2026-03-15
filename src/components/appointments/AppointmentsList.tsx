@@ -32,7 +32,7 @@ export const AppointmentsList = () => {
     }
   };
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const handleStatusChange = async (id: string, status: Appointment['status']) => {
     try {
       await AppointmentService.updateAppointmentStatus(id, status);
       loadAppointments();

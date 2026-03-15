@@ -223,7 +223,7 @@ export const SuperAdminPanel = () => {
     setLoading(true);
     try {
       const data = await AdminService.getAdminUsers();
-      setUsers(data);
+      setUsers(data as any[]);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -247,7 +247,7 @@ export const SuperAdminPanel = () => {
     setLoading(true);
     try {
       const data = await AdminService.getAdministrators();
-      setAdmins(data);
+      setAdmins(data as any[]);
     } catch (error) {
       console.error('Error fetching admins:', error);
     } finally {
@@ -259,7 +259,7 @@ export const SuperAdminPanel = () => {
     setLoading(true);
     try {
       const data = await AdminService.getVerifiedBenefits();
-      setBenefits(data);
+      setBenefits(data as VerifiedBenefit[]);
     } catch (error) {
       console.error('Error fetching benefits:', error);
     } finally {
@@ -271,7 +271,7 @@ export const SuperAdminPanel = () => {
     setLoading(true);
     try {
       const data = await AdminService.getAds();
-      setAds(data);
+      setAds(data as any[]);
     } catch (error) {
       console.error('Error fetching ads:', error);
     } finally {
