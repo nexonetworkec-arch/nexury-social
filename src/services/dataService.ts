@@ -108,17 +108,7 @@ export const dataService = {
   deleteAd: AdminService.deleteAd.bind(AdminService),
 
   // ADS (PUBLIC)
-  async getAds(): Promise<any[]> {
-    const { data, error } = await supabase.from('ads').select('*').eq('is_active', true);
-    if (error) throw error;
-    return data || [];
-  },
-
-  async recordAdImpression(adId: string) {
-    await supabase.rpc('increment_ad_impressions', { p_ad_id: adId });
-  },
-
-  async recordAdClick(adId: string) {
-    await supabase.rpc('increment_ad_clicks', { p_ad_id: adId });
-  }
+  getAds: AdminService.getAds.bind(AdminService),
+  recordAdImpression: AdminService.recordAdImpression.bind(AdminService),
+  recordAdClick: AdminService.recordAdClick.bind(AdminService)
 };

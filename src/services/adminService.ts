@@ -165,6 +165,14 @@ export class AdminService extends BaseService {
     );
   }
 
+  static async recordAdImpression(adId: string) {
+    return supabase.rpc('increment_ad_impressions', { p_ad_id: adId });
+  }
+
+  static async recordAdClick(adId: string) {
+    return supabase.rpc('increment_ad_clicks', { p_ad_id: adId });
+  }
+
   static async getAdministrators() {
     return this.handleResponse(
       supabase.from('profiles').select('*').or('is_admin.eq.true,is_super_admin.eq.true')
