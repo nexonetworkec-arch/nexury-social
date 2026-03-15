@@ -33,7 +33,12 @@ export const RightPanel = ({
     const fetchTrends = async () => {
       try {
         const data = await SocialService.getTrends();
-        setTrends(data);
+        const formattedTrends = data.map(t => ({
+          category: 'Tendencia',
+          title: `#${t.tag}`,
+          posts: `${t.count} posts`
+        }));
+        setTrends(formattedTrends);
       } catch (err) {
         console.error('Error loading trends:', err);
       } finally {

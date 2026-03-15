@@ -62,18 +62,23 @@ export class AuthService extends BaseService {
     );
   }
 
-  static async uploadMedia(file: File, path: string): Promise<string> {
+  static async uploadMedia(file: File, bucket: string): Promise<string> {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${path}/${fileName}`;
+    const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('media')
+      .from(bucket)
       .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      if ((uploadError as any).message === 'Bucket not found') {
+        throw new Error(`El bucket "${bucket}" no existe en Supabase Storage. Por favor, créalo en el panel de Supabase.`);
+      }
+      throw uploadError;
+    }
 
-    const { data } = supabase.storage.from('media').getPublicUrl(filePath);
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
     return data.publicUrl;
   }
 

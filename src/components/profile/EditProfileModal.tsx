@@ -59,7 +59,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
           finalAvatarUrl = await AuthService.uploadMedia(avatarFile, 'avatars');
         } catch (uploadErr) {
           console.error('Error uploading avatar:', uploadErr);
-          throw new Error('Error al subir la imagen. Intenta con un archivo más pequeño.');
+          throw new Error('Error al subir la imagen. Verifica tu conexión o el formato del archivo.');
         }
       }
 

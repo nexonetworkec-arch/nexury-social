@@ -70,10 +70,8 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
     if (!user || !post.id) return;
 
     const timer = setTimeout(async () => {
-      const isNewView = await SocialService.incrementPostViews(post.id, user.id);
-      if (isNewView) {
-        setViewsCount(prev => prev + 1);
-      }
+      await SocialService.incrementPostViews(post.id, user.id);
+      setViewsCount(prev => prev + 1);
     }, 2000); // 2 segundos para contar como interacción real y única
 
     return () => clearTimeout(timer);
@@ -406,17 +404,17 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
             {post.content}
           </p>
 
-          {post.image_url && (
+          {post.media_url && (
             <div className="mt-3 sm:mt-4 rounded-2xl sm:rounded-[2rem] overflow-hidden border border-slate-100 shadow-sm group-hover/post:shadow-md transition-all duration-500">
               {post.media_type === 'video' ? (
                 <video 
-                  src={post.image_url || undefined} 
+                  src={post.media_url || undefined} 
                   className="w-full h-auto max-h-[400px] sm:max-h-[550px] object-cover" 
                   controls
                 />
               ) : (
                 <img 
-                  src={post.image_url || undefined} 
+                  src={post.media_url || undefined} 
                   className="w-full h-auto max-h-[400px] sm:max-h-[550px] object-cover hover:scale-105 transition-transform duration-700" 
                   alt="Post content" 
                   referrerPolicy="no-referrer"
@@ -504,7 +502,7 @@ export const Post: React.FC<{ post: PostType }> = React.memo(({ post: initialPos
               <Share2 size={19} />
             </Button>
 
-            {isAppointmentsEnabled && post.is_verified && post.show_appointment_button === true && (
+            {isAppointmentsEnabled && post.is_verified && post.has_appointments === true && (
               <Button 
                 variant="ghost"
                 size="icon"

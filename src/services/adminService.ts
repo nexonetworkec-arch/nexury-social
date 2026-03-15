@@ -76,8 +76,8 @@ export class AdminService extends BaseService {
       supabase.from('posts').select('*', { count: 'exact', head: true }),
       supabase.from('user_reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('appointments').select('*', { count: 'exact', head: true }),
-      supabase.from('post_comments').select('*', { count: 'exact', head: true }),
-      supabase.from('post_likes').select('*', { count: 'exact', head: true }),
+      supabase.from('comments').select('*', { count: 'exact', head: true }),
+      supabase.from('likes').select('*', { count: 'exact', head: true }),
       supabase.from('ads').select('*', { count: 'exact', head: true })
     ]);
 
@@ -96,13 +96,22 @@ export class AdminService extends BaseService {
   }
 
   static async isBenefitActive(slug: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('verified_benefits')
-      .select('is_active')
-      .eq('slug', slug)
-      .single();
-    if (error) return false;
-    return data?.is_active || false;
+    try {
+      const { data, error } = await supabase
+        .from('verified_benefits')
+        .select('is_active')
+        .eq('slug', slug)
+        .maybeSingle();
+      
+      if (error) {
+        console.warn(`Error checking benefit "${slug}":`, error.message);
+        return false;
+      }
+      return data?.is_active || false;
+    } catch (err) {
+      console.warn(`Exception checking benefit "${slug}":`, err);
+      return false;
+    }
   }
 
   static async getAdminUsers() {

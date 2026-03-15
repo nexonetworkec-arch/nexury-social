@@ -29,8 +29,9 @@ export interface Post {
   id: string;
   user_id: string;
   content: string;
-  image_url?: string;
+  media_url?: string;
   media_type?: 'image' | 'video';
+  has_appointments?: boolean;
   likes_count: number;
   comments_count: number;
   views_count: number;
@@ -39,7 +40,7 @@ export interface Post {
   display_name: string;
   avatar_url: string;
   is_verified?: boolean | number;
-  show_appointment_button?: boolean;
+  user_has_liked?: boolean;
 }
 
 export interface Comment {

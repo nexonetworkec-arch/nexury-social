@@ -80,13 +80,13 @@ export const AdminPanel = () => {
           setStats(data);
         } else if (activeTab === 'users') {
           const data = await AdminService.getAdminUsers();
-          setUsers(data);
+          setUsers(data as any[]);
         } else if (activeTab === 'posts') {
           const data = await AdminService.getAdminPosts();
-          setPosts(data);
+          setPosts(data as any[]);
         } else if (activeTab === 'ads') {
           const data = await AdminService.getAds();
-          setAds(data);
+          setAds(data as any[]);
         }
       } catch (error) {
         console.error('Error fetching admin data', error);

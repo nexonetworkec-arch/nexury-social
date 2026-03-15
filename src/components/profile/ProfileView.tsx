@@ -138,7 +138,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
         setPosts(userPosts);
   
         if (userData.is_verified) {
-          const allBenefits = await AdminService.getVerifiedBenefits();
+          const allBenefits = await AdminService.getVerifiedBenefits() as any[];
           setBenefits(allBenefits.filter(b => b.is_active));
         }
 
@@ -240,7 +240,7 @@ export const ProfileView = ({ userId }: { userId?: string | null }) => {
     }));
 
     try {
-      await SocialService.followUser(currentUser.id, targetId, following);
+      await SocialService.followUser(currentUser.id, targetId);
       await refreshUser();
     } catch (error) {
       console.error('Error following user', error);

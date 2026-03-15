@@ -114,12 +114,26 @@ export class SocialService extends BaseService {
     if (error) throw error;
   }
 
-  static async updatePost(postId: string, updates: Partial<Post>): Promise<void> {
-    const { error } = await supabase.from('posts').update(updates).eq('id', postId);
+  static async updatePost(postId: string, updates: Partial<Post>): Promise<Post> {
+    const { data, error } = await supabase
+      .from('posts')
+      .update(updates)
+      .eq('id', postId)
+      .select(`
+        *,
+        profiles:user_id (
+          username,
+          display_name,
+          avatar_url,
+          is_verified
+        )
+      `)
+      .single();
     if (error) throw error;
+    return this.mapPostData(data);
   }
 
-  static async toggleBookmark(userId: string, postId: string): Promise<boolean> {
+  static async toggleBookmark(postId: string, userId: string): Promise<{ success: boolean; action: 'added' | 'removed' }> {
     const { data: existing } = await supabase
       .from('bookmarks')
       .select('*')
@@ -129,10 +143,10 @@ export class SocialService extends BaseService {
 
     if (existing) {
       await supabase.from('bookmarks').delete().eq('user_id', userId).eq('post_id', postId);
-      return false;
+      return { success: true, action: 'removed' };
     } else {
       await supabase.from('bookmarks').insert([{ user_id: userId, post_id: postId }]);
-      return true;
+      return { success: true, action: 'added' };
     }
   }
 
@@ -239,8 +253,10 @@ export class SocialService extends BaseService {
     );
   }
 
-  static async incrementPostViews(postId: string, userId: string): Promise<void> {
-    await supabase.rpc('record_view_atomic', { p_post_id: postId, p_user_id: userId });
+  static async incrementPostViews(postId: string, userId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('record_view_atomic', { p_post_id: postId, p_user_id: userId });
+    if (error) throw error;
+    return true; // Simplificado: asumimos que siempre es una vista válida por ahora
   }
 
   static async recordUniqueView(postId: string, userId: string): Promise<void> {

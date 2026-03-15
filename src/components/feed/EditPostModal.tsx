@@ -16,10 +16,10 @@ interface EditPostModalProps {
 
 export const EditPostModal: React.FC<EditPostModalProps> = ({ isOpen, onClose, post, onPostUpdated }) => {
   const [content, setContent] = useState(post.content);
-  const [mediaUrl, setMediaUrl] = useState(post.image_url || '');
+  const [mediaUrl, setMediaUrl] = useState(post.media_url || '');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>(post.media_type || 'image');
-  const [showAppointmentButton, setShowAppointmentButton] = useState(post.show_appointment_button === true);
+  const [showAppointmentButton, setShowAppointmentButton] = useState(post.has_appointments === true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,14 +52,12 @@ export const EditPostModal: React.FC<EditPostModalProps> = ({ isOpen, onClose, p
         finalMediaUrl = await AuthService.uploadMedia(mediaFile, 'posts');
       }
 
-      const updatedPost = await SocialService.updatePost(
-        post.id, 
-        post.user_id, 
-        content, 
-        finalMediaUrl, 
-        mediaType,
-        showAppointmentButton
-      );
+      const updatedPost = await SocialService.updatePost(post.id, {
+        content,
+        media_url: finalMediaUrl,
+        media_type: mediaType,
+        has_appointments: showAppointmentButton
+      });
       
       onPostUpdated(updatedPost);
       onClose();

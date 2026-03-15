@@ -59,15 +59,15 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
         setTargetUser(profile);
 
         // 2. Get or create conversation
-        const convId = await ChatService.getOrCreateConversation(currentUser.id, userId);
-        setConversationId(convId);
+        const conversation = await ChatService.getOrCreateConversation([currentUser.id, userId]);
+        setConversationId(conversation.id);
 
         // 3. Fetch initial messages
-        const data = await ChatService.getMessages(convId);
+        const data = await ChatService.getMessages(conversation.id);
         setMessages(data);
 
         // 4. Mark messages as read
-        await ChatService.markMessagesAsRead(convId, currentUser.id);
+        await ChatService.markMessagesAsRead(conversation.id, currentUser.id);
         refreshCounts();
       } catch (error) {
         console.error('Error initializing chat window:', error);
@@ -117,7 +117,7 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
     if (!confirm('¿Estás seguro de que quieres eliminar esta conversación? Desaparecerá de tu lista y los mensajes se ocultarán solo para ti.')) return;
 
     try {
-      await ChatService.deleteConversation(conversationId, currentUser.id);
+      await ChatService.deleteConversation(conversationId);
       await refreshConversations();
       onClose();
     } catch (error) {
@@ -179,7 +179,8 @@ const ChatWindow: React.FC<{ userId: string, onClose: () => void }> = ({ userId,
       // If conversationId is missing, try to get/create it now
       if (!currentConvId) {
         setLoading(true);
-        currentConvId = await ChatService.getOrCreateConversation(currentUser.id, userId);
+        const conversation = await ChatService.getOrCreateConversation([currentUser.id, userId]);
+        currentConvId = conversation.id;
         setConversationId(currentConvId);
         setLoading(false);
       }
@@ -412,7 +413,7 @@ const ChatHistoryPanel: React.FC = () => {
     if (!confirm('¿Estás seguro de que quieres eliminar esta conversación? Los mensajes desaparecerán solo para ti, pero la otra persona conservará su copia.')) return;
 
     try {
-      await ChatService.deleteConversation(conversationId, currentUser.id);
+      await ChatService.deleteConversation(conversationId);
       await refreshConversations();
     } catch (error) {
       console.error('Error deleting conversation:', error);

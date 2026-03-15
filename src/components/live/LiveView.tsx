@@ -41,7 +41,7 @@ export const LiveView: React.FC = () => {
     e.stopPropagation();
     
     try {
-      await LiveService.deleteLiveStream(streamId, user?.id || '');
+      await LiveService.deleteLiveStream(streamId);
       setPastStreams(prev => prev.filter(s => s.id !== streamId));
       setStreams(prev => prev.filter(s => s.id !== streamId));
     } catch (err) {

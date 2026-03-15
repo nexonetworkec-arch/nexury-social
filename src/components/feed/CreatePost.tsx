@@ -57,7 +57,7 @@ export const CreatePost = ({ onPostCreated }: { onPostCreated: (post: any) => vo
       onPostCreated(newPost);
     } catch (error: any) {
       console.error('Failed to post', error);
-      alert(error.message || 'Error al publicar. Es posible que el archivo sea demasiado grande o que el almacenamiento no esté configurado.');
+      alert(error.message || 'Error al publicar. Verifica tu conexión o el formato del archivo.');
     } finally {
       setIsPosting(false);
     }
