@@ -124,7 +124,7 @@ export class AdminService extends BaseService {
     return this.handleResponse(
       supabase.from('posts').select(`
         *,
-        profiles (username, display_name, avatar_url)
+        profiles!user_id (username, display_name, avatar_url)
       `).order('created_at', { ascending: false })
     );
   }

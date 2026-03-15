@@ -8,7 +8,7 @@ export class LiveService extends BaseService {
       .from('live_streams')
       .select(`
         *,
-        profiles:user_id (username, display_name, avatar_url, is_verified)
+        profiles!user_id (username, display_name, avatar_url, is_verified)
       `)
       .eq('is_active', true)
       .order('started_at', { ascending: false });
@@ -29,7 +29,7 @@ export class LiveService extends BaseService {
       .from('live_streams')
       .select(`
         *,
-        profiles:user_id (username, display_name, avatar_url, is_verified)
+        profiles!user_id (username, display_name, avatar_url, is_verified)
       `)
       .eq('is_active', false)
       .order('ended_at', { ascending: false })
@@ -78,7 +78,7 @@ export class LiveService extends BaseService {
       .from('live_messages')
       .select(`
         *,
-        profiles:user_id (username, display_name, avatar_url, is_verified)
+        profiles!user_id (username, display_name, avatar_url, is_verified)
       `)
       .eq('stream_id', streamId)
       .order('created_at', { ascending: true });

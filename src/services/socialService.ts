@@ -8,7 +8,7 @@ export class SocialService extends BaseService {
       .from('posts')
       .select(`
         *,
-        profiles (
+        profiles!user_id (
           username,
           display_name,
           avatar_url,
@@ -39,7 +39,7 @@ export class SocialService extends BaseService {
       .from('posts')
       .select(`
         *,
-        profiles (
+        profiles!user_id (
           username,
           display_name,
           avatar_url,
@@ -70,7 +70,7 @@ export class SocialService extends BaseService {
       }])
       .select(`
         *,
-        profiles (
+        profiles!user_id (
           username,
           display_name,
           avatar_url,
@@ -139,7 +139,7 @@ export class SocialService extends BaseService {
       .eq('id', postId)
       .select(`
         *,
-        profiles (
+        profiles!user_id (
           username,
           display_name,
           avatar_url,
@@ -185,7 +185,7 @@ export class SocialService extends BaseService {
         .from('comments')
         .select(`
           *,
-          profiles (username, display_name, avatar_url, is_verified)
+          profiles!user_id (username, display_name, avatar_url, is_verified)
         `)
         .eq('post_id', postId)
         .order('created_at', { ascending: true })
@@ -198,7 +198,7 @@ export class SocialService extends BaseService {
       .insert([{ post_id: postId, user_id: userId, content }])
       .select(`
         *,
-        profiles (username, display_name, avatar_url, is_verified)
+        profiles!user_id (username, display_name, avatar_url, is_verified)
       `)
       .single();
 
@@ -308,9 +308,9 @@ export class SocialService extends BaseService {
       .from('bookmarks')
       .select(`
         post_id,
-        posts:post_id (
+        posts!post_id (
           *,
-          profiles (username, display_name, avatar_url, is_verified)
+          profiles!user_id (username, display_name, avatar_url, is_verified)
         )
       `)
       .eq('user_id', userId)

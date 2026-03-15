@@ -108,7 +108,7 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
           console.warn('posts_with_profiles view failed, falling back to manual join:', err);
           const { data } = await supabase
             .from('posts')
-            .select('*, profiles:user_id(*)')
+            .select('*, profiles!user_id(*)')
             .eq('id', payload.new.id)
             .single();
           
@@ -155,7 +155,7 @@ const Feed = ({ searchQuery, onSearchChange }: { searchQuery: string, onSearchCh
           console.warn('posts_with_profiles view failed on update, falling back:', err);
           const { data } = await supabase
             .from('posts')
-            .select('*, profiles:user_id(*)')
+            .select('*, profiles!user_id(*)')
             .eq('id', payload.new.id)
             .single();
           

@@ -8,7 +8,7 @@ export class NotificationService extends BaseService {
       .from('notifications')
       .select(`
         *,
-        from_profile:from_user_id (username, display_name, avatar_url, is_verified)
+        from_profile:profiles!from_user_id (username, display_name, avatar_url, is_verified)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
